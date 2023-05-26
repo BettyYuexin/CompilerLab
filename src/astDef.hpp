@@ -44,4 +44,34 @@ public:
     }
 };
 
+class FuncTypeAST : public BaseAST {
+public:
+    std::string type;
+
+    void Dump() const override {
+        std::cout << "FuncTypeAST { " << type << " }";
+    }
+};
+
+class BlockAST : public BaseAST {
+public:
+    std::unique_ptr<BaseAST> stmt;
+
+    void Dump() const override {
+        std::cout << "BlockAST { ";
+        stmt->Dump();
+        std::cout << " }";
+    }
+};
+
+class StmtAST : public BaseAST {
+public:
+    int number;
+
+    void Dump() const override {
+        std::cout << "StmtAST { " << number << " }";
+    }
+};
+
+
 
