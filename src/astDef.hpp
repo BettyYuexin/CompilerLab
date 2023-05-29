@@ -5,7 +5,12 @@
 #include <iostream>
 #include <memory>
 #include <string>
+// #include <map>
 
+
+// std::map <std::string, std::string> type2IRtype = {
+//     {"int", "i32"}
+// };
 
 // 所有 AST 的基类
 class BaseAST {
@@ -22,9 +27,7 @@ public:
     std::unique_ptr<BaseAST> func_def;
 
     void Dump() const override {
-        std::cout << "CompUnitAST { ";
         func_def->Dump();
-        std::cout << " }";
     }
 };
 
@@ -36,9 +39,9 @@ public:
     std::unique_ptr<BaseAST> block;
 
     void Dump() const override {
-        std::cout << "FuncDefAST { ";
+        std::cout << "func @" << ident << "(): ";
         func_type->Dump();
-        std::cout << ", " << ident << ", ";
+        std::cout << "{ ";
         block->Dump();
         std::cout << " }";
     }
@@ -49,7 +52,7 @@ public:
     std::string type;
 
     void Dump() const override {
-        std::cout << "FuncTypeAST { " << type << " }";
+        std::cout << type;
     }
 };
 
@@ -58,9 +61,8 @@ public:
     std::unique_ptr<BaseAST> stmt;
 
     void Dump() const override {
-        std::cout << "BlockAST { ";
+        std::cout << "%%entry: ";
         stmt->Dump();
-        std::cout << " }";
     }
 };
 
@@ -69,7 +71,7 @@ public:
     int number;
 
     void Dump() const override {
-        std::cout << "StmtAST { " << number << " }";
+        std::cout << "ret " << number;
     }
 };
 
