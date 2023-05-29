@@ -5,12 +5,14 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <sstream>
 // #include <map>
 
 
 // std::map <std::string, std::string> type2IRtype = {
 //     {"int", "i32"}
 // };
+
 
 // 所有 AST 的基类
 class BaseAST {
@@ -24,8 +26,9 @@ public:
 class CompUnitAST : public BaseAST {
 public:
     // 用智能指针管理对象
-    std::unique_ptr<BaseAST> func_def;
-
+    std::stringstream ss;
+    std::unique_ptr<BaseAST> func_def(ss);
+    
     void Dump() const override {
         func_def->Dump();
     }
@@ -34,45 +37,53 @@ public:
 // FuncDef 也是 BaseAST
 class FuncDefAST : public BaseAST {
 public:
-    std::unique_ptr<BaseAST> func_type;
+    std::stringstream ss;
+    std::unique_ptr<BaseAST> func_type(ss);
     std::string ident;
-    std::unique_ptr<BaseAST> block;
+    std::unique_ptr<BaseAST> block(ss);
 
     void Dump() const override {
         std::cout << "fun @" << ident << "(): ";
         func_type->Dump();
-        std::cout << "{\n";
+        ss << "{\n";
         block->Dump();
-        std::cout << "}\n";
+        ss << "}\n";
     }
+    FuncDefAST(std::stringstream ss):ss(ss){}
 };
 
 class FuncTypeAST : public BaseAST {
 public:
-    std::string type;
+    std::stringstream ss;
+    std::string type(ss);
 
     void Dump() const override {
-        std::cout << type;
+        ss << type;
     }
+    FuncTypeAST(std::stringstream ss):ss(ss) {}
 };
 
 class BlockAST : public BaseAST {
 public:
-    std::unique_ptr<BaseAST> stmt;
+    std::stringstream ss;
+    std::unique_ptr<BaseAST> stmt(ss);
 
     void Dump() const override {
-        std::cout << "%" << "entry:\n";
+        ss << "%" << "entry:\n";
         stmt->Dump();
     }
+    BlockAST(std::stringstream ss):ss(ss) {}
 };
 
 class StmtAST : public BaseAST {
 public:
+    std::stringstream ss;
     int number;
 
     void Dump() const override {
-        std::cout << "ret " << number << std::endl;
+        ss << "ret " << number << std::endl;
     }
+    StmtAST(std::stringstream ss):ss(ss) {}
 };
 
 
