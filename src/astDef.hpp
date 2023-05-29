@@ -41,9 +41,9 @@ public:
     void Dump() const override {
         std::cout << "func @" << ident << "(): ";
         func_type->Dump();
-        std::cout << "{ ";
+        std::cout << "{\n";
         block->Dump();
-        std::cout << " }";
+        std::cout << "}\n";
     }
 };
 
@@ -61,7 +61,7 @@ public:
     std::unique_ptr<BaseAST> stmt;
 
     void Dump() const override {
-        std::cout << "%%entry: ";
+        std::cout << "%" << "entry:\n";
         stmt->Dump();
     }
 };
@@ -71,7 +71,7 @@ public:
     int number;
 
     void Dump() const override {
-        std::cout << "ret " << number;
+        std::cout << "ret " << number << std::endl;
     }
 };
 
