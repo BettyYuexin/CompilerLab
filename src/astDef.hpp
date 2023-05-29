@@ -39,7 +39,7 @@ public:
     std::unique_ptr<BaseAST> block;
 
     void Dump() const override {
-        std::cout << "func @" << ident << "(): ";
+        std::cout << "fun @" << ident << "(): ";
         func_type->Dump();
         std::cout << "{\n";
         block->Dump();
