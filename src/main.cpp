@@ -1,4 +1,5 @@
 #include "astDef.hpp"
+#include "visit.hpp"
 
 using namespace std;
 
