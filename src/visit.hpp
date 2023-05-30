@@ -5,6 +5,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <cstring>
 #include <sstream>
 #include "koopa.h"
 // #define _DEBUG

@@ -1,0 +1,2 @@
+build/compiler -riscv hello.c -o hello.riscv
+build/compiler -koopa hello.c -o hello.koopa
