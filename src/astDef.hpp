@@ -6,6 +6,7 @@
 #include <memory>
 #include <string>
 #include <sstream>
+#include "koopa.h"
 // #include <map>
 
 
@@ -26,8 +27,7 @@ public:
 class CompUnitAST : public BaseAST {
 public:
     // 用智能指针管理对象
-    std::stringstream ss;
-    std::unique_ptr<BaseAST> func_def(ss);
+    std::unique_ptr<BaseAST> func_def;
     
     void Dump() const override {
         func_def->Dump();
@@ -37,54 +37,54 @@ public:
 // FuncDef 也是 BaseAST
 class FuncDefAST : public BaseAST {
 public:
-    std::stringstream ss;
-    std::unique_ptr<BaseAST> func_type(ss);
+    std::unique_ptr<BaseAST> func_type;
     std::string ident;
-    std::unique_ptr<BaseAST> block(ss);
+    std::unique_ptr<BaseAST> block;
 
     void Dump() const override {
         std::cout << "fun @" << ident << "(): ";
         func_type->Dump();
-        ss << "{\n";
+        std::cout << "{\n";
         block->Dump();
-        ss << "}\n";
+        std::cout << "}\n";
     }
-    FuncDefAST(std::stringstream ss):ss(ss){}
 };
 
 class FuncTypeAST : public BaseAST {
 public:
-    std::stringstream ss;
-    std::string type(ss);
+    std::string type;
 
     void Dump() const override {
-        ss << type;
+        std::cout << type;
     }
-    FuncTypeAST(std::stringstream ss):ss(ss) {}
 };
 
 class BlockAST : public BaseAST {
 public:
-    std::stringstream ss;
-    std::unique_ptr<BaseAST> stmt(ss);
+    std::unique_ptr<BaseAST> stmt;
 
     void Dump() const override {
-        ss << "%" << "entry:\n";
+        std::cout << "%" << "entry:\n";
         stmt->Dump();
     }
-    BlockAST(std::stringstream ss):ss(ss) {}
 };
 
 class StmtAST : public BaseAST {
 public:
-    std::stringstream ss;
     int number;
 
     void Dump() const override {
-        ss << "ret " << number << std::endl;
+        std::cout << "ret " << number << std::endl;
     }
-    StmtAST(std::stringstream ss):ss(ss) {}
 };
 
 
 
+// 函数声明
+void Visit(const koopa_raw_program_t);
+void Visit(const koopa_raw_slice_t);
+void Visit(const koopa_raw_function_t);
+void Visit(const koopa_raw_basic_block_t);
+void Visit(const koopa_raw_value_t);
+void Visit(const koopa_raw_return_t);
+void Visit(const koopa_raw_integer_t);
