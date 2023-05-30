@@ -6,7 +6,6 @@
 #include <memory>
 #include <string>
 #include <sstream>
-#include "koopa.h"
 // #include <map>
 
 
