@@ -11,6 +11,8 @@
 // #define _DEBUG
 
 
+std::string tempRegName[15] = {"t0", "t1", "t2", "t3", "t4", "t5", "t6", "a0", "a1", "a2", "a3", "a4", "a5", "a6", "a7"};
+
 // 函数声明
 void Visit(const koopa_raw_program_t&);
 void Visit(const koopa_raw_slice_t&);
@@ -19,6 +21,8 @@ void Visit(const koopa_raw_basic_block_t&);
 void Visit(const koopa_raw_value_t&);
 void Visit(const koopa_raw_return_t&);
 void Visit(const koopa_raw_integer_t&);
+void Visit(const koopa_raw_binary_t&);
+void Visit(const koopa_raw_binary_op_t&);
 
 
 
@@ -64,7 +68,7 @@ void Visit(const koopa_raw_slice_t &slice) {
         Visit(reinterpret_cast<koopa_raw_value_t>(ptr));
         break;
       default:
-        // 我们暂时不会遇到其他内容, 于是不对其做任何处理
+        // std::cout << "false slice val!!!" << slice.kind << std::endl;
         assert(false);
     }
 
@@ -125,8 +129,11 @@ void Visit(const koopa_raw_value_t &value) {
       // 访问 integer 指令
       Visit(kind.data.integer);
       break;
+    case KOOPA_RVT_BINARY:
+      Visit(kind.data.binary);
+      break;
     default:
-      // 其他类型暂时遇不到
+      // std::cout << "false val!!!" << kind.tag << std::endl;
       assert(false);
   }
 
@@ -156,4 +163,64 @@ void Visit(const koopa_raw_integer_t &int_val) {
   #endif
 
   std::cout << int_val.value;
+}
+
+void Visit(const koopa_raw_binary_t &bin_val) {
+  #ifdef _DEBUG
+  std::cout << "visit bin_val:" << std::endl;
+  #endif
+  std::cout << "\t";
+  Visit(bin_val.op);
+  std::cout << "\t";
+  Visit(bin_val.lhs);
+  std::cout << ", ";
+  Visit(bin_val.rhs);
+  std::cout << "\n";
+  // std::cout << int_val.value;
+}
+
+
+void Visit(const koopa_raw_binary_op_t &bin_op) {
+  #ifdef _DEBUG
+  std::cout << "visit bin_op:" << bin_op << std::endl;
+  #endif
+  switch(bin_op) {
+    case KOOPA_RBO_NOT_EQ:
+      std::cout << "ne"; break;
+    case KOOPA_RBO_EQ:
+      std::cout << "eq"; break;
+    case KOOPA_RBO_GT:
+      std::cout << "gt"; break;
+    case KOOPA_RBO_LT:
+      std::cout << "lt"; break;
+    case KOOPA_RBO_GE:
+      std::cout << "ge"; break;
+    case KOOPA_RBO_LE:
+      std::cout << "le"; break;
+    case KOOPA_RBO_ADD:
+      std::cout << "add"; break;
+    case KOOPA_RBO_SUB:
+      std::cout << "sub"; break;
+    case KOOPA_RBO_MUL:
+      std::cout << "mul"; break;
+    case KOOPA_RBO_DIV:
+      std::cout << "div"; break;
+    case KOOPA_RBO_MOD:
+      std::cout << "mod"; break;
+    case KOOPA_RBO_AND:
+      std::cout << "and"; break;
+    case KOOPA_RBO_OR:
+      std::cout << "or"; break;
+    case KOOPA_RBO_XOR:
+      std::cout << "xor"; break;
+    case KOOPA_RBO_SHL:
+      std::cout << "shl"; break;
+    case KOOPA_RBO_SHR:
+      std::cout << "shr"; break;
+    case KOOPA_RBO_SAR:
+      std::cout << "sar"; break;
+    default:
+      // std::cout << "false op!!!" << bin_op << std::endl;
+      assert(false);
+  }
 }
