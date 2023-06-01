@@ -124,21 +124,95 @@ public:
 
 class ExpAST : public BaseAST {
 public:
-    unique_ptr<BaseAST> unaryExp;
+    unique_ptr<BaseAST> addExp;
 
     void Dump() override {
         #ifdef _DEBUG
         cout << "ExpAST {\n";
         #endif
 
-        unaryExp->Dump();
-        variableName = unaryExp->variableName;
+        addExp->Dump();
+        variableName = addExp->variableName;
 
         #ifdef _DEBUG
         cout << "}\n";
         #endif
     }
 };
+
+
+class MulExpAST : public BaseAST {
+public:
+    unique_ptr<BaseAST> mulExp;
+    unique_ptr<BaseAST> unaryExp;
+    string op;
+
+    void Dump() override {
+        #ifdef _DEBUG
+        cout << "MulExpAST {\n";
+        #endif
+        
+        if(!strcmp(parseType.c_str(), "unaryExp")) {
+            unaryExp->Dump();
+            variableName = unaryExp->variableName;
+        }
+        else if (!strcmp(parseType.c_str(), "bin")) {
+            mulExp->Dump();
+            unaryExp->Dump();
+            if(!strcmp(op.c_str(), "*")) {
+                cout << "\t%" << tempID << " = mul " << mulExp->variableName << ", " << unaryExp->variableName << "\n";
+            }
+            else if(!strcmp(op.c_str(), "/")) {
+                cout << "\t%" << tempID << " = div " << mulExp->variableName << ", " << unaryExp->variableName << "\n";
+            }
+            else if(!strcmp(op.c_str(), "%")) {
+                cout << "\t%" << tempID << " = mod " << mulExp->variableName << ", " << unaryExp->variableName << "\n";
+            }
+            variableName = "%" + to_string(tempID);
+            tempID++;
+        }
+
+        #ifdef _DEBUG
+        cout << "}\n";
+        #endif
+    }
+};
+
+
+class AddExpAST : public BaseAST {
+public:
+    unique_ptr<BaseAST> addExp;
+    unique_ptr<BaseAST> mulExp;
+    string op;
+
+    void Dump() override {
+        #ifdef _DEBUG
+        cout << "AddExpAST {\n";
+        #endif
+        
+        if(!strcmp(parseType.c_str(), "multExp")) {
+            mulExp->Dump();
+            variableName = mulExp->variableName;
+        }
+        else if (!strcmp(parseType.c_str(), "bin")) {
+            addExp->Dump();
+            mulExp->Dump();
+            if(!strcmp(op.c_str(), "+")) {
+                cout << "\t%" << tempID << " = add " << addExp->variableName << ", " << mulExp->variableName << "\n";
+            }
+            else if(!strcmp(op.c_str(), "-")) {
+                cout << "\t%" << tempID << " = sub " << addExp->variableName << ", " << mulExp->variableName << "\n";
+            }
+            variableName = "%" + to_string(tempID);
+            tempID++;
+        }
+
+        #ifdef _DEBUG
+        cout << "}\n";
+        #endif
+    }
+};
+
 
 
 class PrimaryExpAST : public BaseAST {

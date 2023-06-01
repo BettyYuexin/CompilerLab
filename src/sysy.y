@@ -42,9 +42,9 @@ using namespace std;
 %token <int_val> INT_CONST
 
 // 非终结符的类型定义
-%type <ast_val> FuncDef FuncType Block Stmt Exp PrimaryExp UnaryExp
+%type <ast_val> FuncDef FuncType Block Stmt Exp PrimaryExp UnaryExp AddExp MulExp
 %type <int_val> Number
-%type <str_val> UnaryOp
+%type <str_val> UnaryOp BinaryOp1 BinaryOp2
 
 %%
 
@@ -107,9 +107,9 @@ Stmt
   ;
 
 Exp
-  : UnaryExp {
+  : AddExp {
     auto ast = new ExpAST();
-    ast->unaryExp = unique_ptr<BaseAST>($1);
+    ast->addExp = unique_ptr<BaseAST>($1);
     $$ = ast;
   }
   ;
@@ -126,6 +126,12 @@ PrimaryExp
     ast->parseType = *unique_ptr<string>(new string("number"));
     ast->number = $1;
     $$ = ast;
+  }
+  ;
+
+Number
+  : INT_CONST {
+    $$ = $1;
   }
   ;
 
@@ -158,12 +164,68 @@ UnaryOp
     string op = "!";
     $$ = &op;
   }
+  ;
 
-Number
-  : INT_CONST {
-    $$ = $1;
+MulExp
+  : UnaryExp {
+    auto ast = new MulExpAST();
+    ast->unaryExp = unique_ptr<BaseAST>($1);
+    ast->parseType = *unique_ptr<string>(new string("unaryExp"));
+    $$ = ast;
+  }
+  | MulExp BinaryOp1 UnaryExp {
+    auto ast = new MulExpAST();
+    ast->mulExp = unique_ptr<BaseAST>($1);
+    ast->parseType = *unique_ptr<string>(new string("bin"));
+    ast->op = *($2);
+    ast->unaryExp = unique_ptr<BaseAST>($3);
+    $$ = ast;
   }
   ;
+
+AddExp
+  : MulExp {
+    auto ast = new AddExpAST();
+    ast->mulExp = unique_ptr<BaseAST>($1);
+    ast->parseType = *unique_ptr<string>(new string("multExp"));
+    $$ = ast;
+  }
+  | AddExp BinaryOp2 MulExp {
+    auto ast = new AddExpAST();
+    ast->addExp = unique_ptr<BaseAST>($1);
+    ast->parseType = *unique_ptr<string>(new string("bin"));
+    ast->op = *($2);
+    ast->mulExp = unique_ptr<BaseAST>($3);
+    $$ = ast;
+  }
+  ;
+
+BinaryOp1
+  : '%' {
+    string op = "%%";
+    $$ = &op;
+  }
+  | '*' {
+    string op = "*";
+    $$ = &op;
+  }
+  | '/' {
+    string op = "/";
+    $$ = &op;
+  }
+  ;
+
+BinaryOp2
+  : '+' {
+    string op = "+";
+    $$ = &op;
+  }
+  | '-' {
+    string op = "-";
+    $$ = &op;
+  }
+  ;
+
 
 %%
 
