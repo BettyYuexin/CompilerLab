@@ -253,7 +253,7 @@ void Visit(const koopa_raw_binary_t &bin_val) {
       break;
     }
     case KOOPA_RBO_ADD: {
-      cout << "add"; 
+      cout << "\tadd\t\t" << saveReg << ",\t" << lhsName << ",\t" << rhsName << endl; 
       break;
     }
     case KOOPA_RBO_SUB: {
@@ -261,15 +261,15 @@ void Visit(const koopa_raw_binary_t &bin_val) {
       break;
     }
     case KOOPA_RBO_MUL: {
-      cout << "mul"; 
+      cout << "\tmul\t\t" << saveReg << ",\t" << lhsName << ",\t" << rhsName << endl;
       break;
     }
     case KOOPA_RBO_DIV: {
-      cout << "div"; 
+      cout << "\tdiv\t\t" << saveReg << ",\t" << lhsName << ",\t" << rhsName << endl;
       break;
     }
-    case KOOPA_RBO_MOD: {
-      cout << "mod"; 
+    case KOOPA_RBO_MOD: { 
+      cout << "\tmod\t\t" << saveReg << ",\t" << lhsName << ",\t" << rhsName << endl;
       break;
     }
     case KOOPA_RBO_AND: {
