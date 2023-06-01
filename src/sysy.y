@@ -42,9 +42,9 @@ using namespace std;
 %token <int_val> INT_CONST
 
 // 非终结符的类型定义
-%type <ast_val> FuncDef FuncType Block Stmt Exp PrimaryExp UnaryExp AddExp MulExp
+%type <ast_val> FuncDef FuncType Block Stmt Exp PrimaryExp UnaryExp AddExp MulExp RelExp EqExp LAndExp LOrExp
 %type <int_val> Number
-%type <str_val> UnaryOp BinaryOp1 BinaryOp2
+%type <str_val> UnaryOp BinaryOp1 BinaryOp2 RelOp EqOp
 
 %%
 
@@ -107,9 +107,9 @@ Stmt
   ;
 
 Exp
-  : AddExp {
+  : LOrExp {
     auto ast = new ExpAST();
-    ast->addExp = unique_ptr<BaseAST>($1);
+    ast->lOrExp = unique_ptr<BaseAST>($1);
     $$ = ast;
   }
   ;
@@ -200,6 +200,74 @@ AddExp
   }
   ;
 
+RelExp
+  : AddExp {
+    auto ast = new RelExpAST();
+    ast->addExp = unique_ptr<BaseAST>($1);
+    ast->parseType = *unique_ptr<string>(new string("addExp"));
+    $$ = ast;
+  }
+  | RelExp RelOp AddExp {
+    auto ast = new RelExpAST();
+    ast->relExp = unique_ptr<BaseAST>($1);
+    ast->parseType = *unique_ptr<string>(new string("bin"));
+    ast->op = *($2);
+    ast->addExp = unique_ptr<BaseAST>($3);
+    $$ = ast;
+  }
+  ;
+
+EqExp
+  : RelExp {
+    auto ast = new EqExpAST();
+    ast->relExp = unique_ptr<BaseAST>($1);
+    ast->parseType = *unique_ptr<string>(new string("relExp"));
+    $$ = ast;
+  }
+  | EqExp EqOp RelExp {
+    auto ast = new EqExpAST();
+    ast->eqExp = unique_ptr<BaseAST>($1);
+    ast->parseType = *unique_ptr<string>(new string("bin"));
+    ast->op = *($2);
+    ast->relExp = unique_ptr<BaseAST>($3);
+    $$ = ast;
+  }
+  ;
+
+LAndExp
+  : EqExp {
+    auto ast = new LAndExpAST();
+    ast->eqExp = unique_ptr<BaseAST>($1);
+    ast->parseType = *unique_ptr<string>(new string("eqExp"));
+    $$ = ast;
+  }
+  | LAndExp '&' '&' EqExp {
+    auto ast = new LAndExpAST();
+    ast->lAndExp = unique_ptr<BaseAST>($1);
+    ast->parseType = *unique_ptr<string>(new string("bin"));
+    ast->op = *unique_ptr<string>(new string("&&"));
+    ast->eqExp = unique_ptr<BaseAST>($4);
+    $$ = ast;
+  }
+  ;
+
+LOrExp
+  : LAndExp {
+    auto ast = new LOrExpAST();
+    ast->lAndExp = unique_ptr<BaseAST>($1);
+    ast->parseType = *unique_ptr<string>(new string("lAndExp"));
+    $$ = ast;
+  }
+  | LOrExp '|' '|' LAndExp {
+    auto ast = new LOrExpAST();
+    ast->lOrExp = unique_ptr<BaseAST>($1);
+    ast->parseType = *unique_ptr<string>(new string("bin"));
+    ast->op = *unique_ptr<string>(new string("||"));
+    ast->lAndExp = unique_ptr<BaseAST>($4);
+    $$ = ast;
+  }
+  ;
+
 BinaryOp1
   : '%' {
     string op = "%%";
@@ -226,6 +294,35 @@ BinaryOp2
   }
   ;
 
+RelOp
+  : '<' {
+    string op = "<";
+    $$ = &op;
+  }
+  | '>' {
+    string op = ">";
+    $$ = &op;
+  }
+  | '<' '=' {
+    string op = "<=";
+    $$ = &op;
+  }
+  | '>' '=' {
+    string op = ">=";
+    $$ = &op;
+  }
+  ;
+
+EqOp
+  : '=' '=' {
+    string op = "==";
+    $$ = &op;
+  }
+  | '!' '=' {
+    string op = "!=";
+    $$ = &op;
+  }
+  ;
 
 %%
 

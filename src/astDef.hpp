@@ -124,15 +124,15 @@ public:
 
 class ExpAST : public BaseAST {
 public:
-    unique_ptr<BaseAST> addExp;
+    unique_ptr<BaseAST> lOrExp;
 
     void Dump() override {
         #ifdef _DEBUG
         cout << "ExpAST {\n";
         #endif
 
-        addExp->Dump();
-        variableName = addExp->variableName;
+        lOrExp->Dump();
+        variableName = lOrExp->variableName;
 
         #ifdef _DEBUG
         cout << "}\n";
@@ -279,7 +279,147 @@ public:
 };
 
 
+class RelExpAST : public BaseAST {
+public:
+    unique_ptr<BaseAST> addExp;
+    unique_ptr<BaseAST> relExp;
+    string op;
 
+    void Dump() override {
+        #ifdef _DEBUG
+        cout << "RelExpAST {\n";
+        #endif
+        
+        if(!strcmp(parseType.c_str(), "addExp")) {
+            addExp->Dump();
+            variableName = addExp->variableName;
+        }
+        else if (!strcmp(parseType.c_str(), "bin")) {
+            relExp->Dump();
+            addExp->Dump();
+            if(!strcmp(op.c_str(), "<")) {
+                cout << "\t%" << tempID << " = lt " << relExp->variableName << ", " << addExp->variableName << "\n";
+            }
+            else if(!strcmp(op.c_str(), ">")) {
+                cout << "\t%" << tempID << " = gt " << relExp->variableName << ", " << addExp->variableName << "\n";
+            }
+            else if(!strcmp(op.c_str(), "<=")) {
+                cout << "\t%" << tempID << " = le " << relExp->variableName << ", " << addExp->variableName << "\n";
+            }
+            else if(!strcmp(op.c_str(), ">=")) {
+                cout << "\t%" << tempID << " = ge " << relExp->variableName << ", " << addExp->variableName << "\n";
+            }
+            variableName = "%" + to_string(tempID);
+            tempID++;
+        }
+
+        #ifdef _DEBUG
+        cout << "}\n";
+        #endif
+    }
+};
+
+class EqExpAST : public BaseAST {
+public:
+    unique_ptr<BaseAST> relExp;
+    unique_ptr<BaseAST> eqExp;
+    string op;
+
+    void Dump() override {
+        #ifdef _DEBUG
+        cout << "EqExpAST {\n";
+        #endif
+        
+        if(!strcmp(parseType.c_str(), "relExp")) {
+            relExp->Dump();
+            variableName = relExp->variableName;
+        }
+        else if (!strcmp(parseType.c_str(), "bin")) {
+            eqExp->Dump();
+            relExp->Dump();
+            if(!strcmp(op.c_str(), "==")) {
+                cout << "\t%" << tempID << " = eq " << eqExp->variableName << ", " << relExp->variableName << "\n";
+            }
+            else if(!strcmp(op.c_str(), "!=")) {
+                cout << "\t%" << tempID << " = ne " << eqExp->variableName << ", " << relExp->variableName << "\n";
+            }
+            variableName = "%" + to_string(tempID);
+            tempID++;
+        }
+
+        #ifdef _DEBUG
+        cout << "}\n";
+        #endif
+    }
+};
+
+class LAndExpAST : public BaseAST {
+public:
+    unique_ptr<BaseAST> eqExp;
+    unique_ptr<BaseAST> lAndExp;
+    string op;
+
+    void Dump() override {
+        #ifdef _DEBUG
+        cout << "LAndExpAST {\n";
+        #endif
+        
+        if(!strcmp(parseType.c_str(), "eqExp")) {
+            eqExp->Dump();
+            variableName = eqExp->variableName;
+        }
+        else if (!strcmp(parseType.c_str(), "bin")) {
+            lAndExp->Dump();
+            eqExp->Dump();
+            if(!strcmp(op.c_str(), "&&")) {
+                cout << "\t%" << tempID << " = and " << lAndExp->variableName << ", " << eqExp->variableName << "\n";
+            }
+            else {
+                assert(false);
+            }
+            variableName = "%" + to_string(tempID);
+            tempID++;
+        }
+
+        #ifdef _DEBUG
+        cout << "}\n";
+        #endif
+    }
+};
+
+class LOrExpAST : public BaseAST {
+public:
+    unique_ptr<BaseAST> lAndExp;
+    unique_ptr<BaseAST> lOrExp;
+    string op;
+
+    void Dump() override {
+        #ifdef _DEBUG
+        cout << "LOrExpAST {\n";
+        #endif
+        
+        if(!strcmp(parseType.c_str(), "lAndExp")) {
+            lAndExp->Dump();
+            variableName = lAndExp->variableName;
+        }
+        else if (!strcmp(parseType.c_str(), "bin")) {
+            lOrExp->Dump();
+            lAndExp->Dump();
+            if(!strcmp(op.c_str(), "||")) {
+                cout << "\t%" << tempID << " = or " << lOrExp->variableName << ", " << lAndExp->variableName << "\n";
+            }
+            else {
+                assert(false);
+            }
+            variableName = "%" + to_string(tempID);
+            tempID++;
+        }
+
+        #ifdef _DEBUG
+        cout << "}\n";
+        #endif
+    }
+};
 
 
 

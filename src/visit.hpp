@@ -228,7 +228,8 @@ void Visit(const koopa_raw_binary_t &bin_val) {
 
   switch(bin_val.op) {
     case KOOPA_RBO_NOT_EQ: {
-      cout << "ne\n";
+      cout << "\txor\t\t" << saveReg << ",\t" << lhsName << ",\t" << rhsName << endl;
+      cout << "\tsnez\t" << saveReg << ",\t" << saveReg << endl;
       break;
     }
     case KOOPA_RBO_EQ: {
@@ -237,19 +238,21 @@ void Visit(const koopa_raw_binary_t &bin_val) {
       break;
     }
     case KOOPA_RBO_GT: {
-      cout << "gt"; 
+      cout << "\tsgt\t\t" << saveReg << ",\t" << lhsName << ",\t" << rhsName << endl;
       break;
     }
     case KOOPA_RBO_LT: {
-      cout << "lt"; 
+      cout << "\tslt\t\t" << saveReg << ",\t" << lhsName << ",\t" << rhsName << endl;
       break;
     }
     case KOOPA_RBO_GE: {
-      cout << "ge"; 
+      cout << "\tslt\t\t" << saveReg << ",\t" << lhsName << ",\t" << rhsName << endl;
+      cout << "\tseqz\t" << saveReg << ",\t" << saveReg << endl;
       break;
     }
     case KOOPA_RBO_LE: {
-      cout << "le"; 
+      cout << "\tsgt\t\t" << saveReg << ",\t" << lhsName << ",\t" << rhsName << endl;
+      cout << "\tseqz\t" << saveReg << ",\t" << saveReg << endl;
       break;
     }
     case KOOPA_RBO_ADD: {
@@ -273,11 +276,11 @@ void Visit(const koopa_raw_binary_t &bin_val) {
       break;
     }
     case KOOPA_RBO_AND: {
-      cout << "and"; 
+      cout << "\tand\t\t" << saveReg << ",\t" << lhsName << ",\t" << rhsName << endl;
       break;
     }
     case KOOPA_RBO_OR: {
-      cout << "or"; 
+      cout << "\tor\t\t" << saveReg << ",\t" << lhsName << ",\t" << rhsName << endl;
       break;
     }
     case KOOPA_RBO_XOR: {
