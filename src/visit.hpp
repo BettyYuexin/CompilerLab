@@ -33,7 +33,8 @@ string getVarName(long);
 bool visitedInst(long);
 
 string allocInstsTable(long ptr) {
-  string regName = tempRegName[regCnt++];
+  string regName = tempRegName[regCnt];
+  regCnt++;
   insts_table.insert(make_pair(ptr, regName));
   return regName;
 }
@@ -179,7 +180,6 @@ void Visit(const koopa_raw_value_t &value) {
       break;
     }
     case KOOPA_RVT_BINARY: {
-      allocInstsTable((long)value);
       Visit(kind.data.binary);
       break;
     }
