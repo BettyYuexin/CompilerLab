@@ -145,7 +145,7 @@ UnaryExp
   | UnaryOp UnaryExp {
     auto ast = new UnaryExpAST();
     ast->parseType = "uop";
-    ast->unaryOp = *($1);
+    ast->unaryOp = *unique_ptr<string>($1);
     ast->unaryExp = unique_ptr<BaseAST>($2);
     $$ = ast;
   }
@@ -153,16 +153,16 @@ UnaryExp
 
 UnaryOp
   : '+' {
-    string op = "+";
-    $$ = &op;
+    string * op = new string("+");
+    $$ = op;
   }
   | '-' {
-    string op = "-";
-    $$ = &op;
+    string * op = new string("-");
+    $$ = op;
   }
   | '!' {
-    string op = "!";
-    $$ = &op;
+    string * op = new string("!");
+    $$ = op;
   }
   ;
 
@@ -177,7 +177,7 @@ MulExp
     auto ast = new MulExpAST();
     ast->mulExp = unique_ptr<BaseAST>($1);
     ast->parseType = "bin";
-    ast->op = *($2);
+    ast->op = *unique_ptr<string>($2);
     ast->unaryExp = unique_ptr<BaseAST>($3);
     $$ = ast;
   }
@@ -194,7 +194,7 @@ AddExp
     auto ast = new AddExpAST();
     ast->addExp = unique_ptr<BaseAST>($1);
     ast->parseType = "bin";
-    ast->op = *($2);
+    ast->op = *unique_ptr<string>($2);
     ast->mulExp = unique_ptr<BaseAST>($3);
     $$ = ast;
   }
@@ -211,7 +211,7 @@ RelExp
     auto ast = new RelExpAST();
     ast->relExp = unique_ptr<BaseAST>($1);
     ast->parseType = "bin";
-    ast->op = *($2);
+    ast->op = *unique_ptr<string>($2);
     ast->addExp = unique_ptr<BaseAST>($3);
     $$ = ast;
   }
@@ -228,7 +228,7 @@ EqExp
     auto ast = new EqExpAST();
     ast->eqExp = unique_ptr<BaseAST>($1);
     ast->parseType = "bin";
-    ast->op = *($2);
+    ast->op = *unique_ptr<string>($2);
     ast->relExp = unique_ptr<BaseAST>($3);
     $$ = ast;
   }
@@ -270,57 +270,57 @@ LOrExp
 
 BinaryOp1
   : '%' {
-    string op = "%%";
-    $$ = &op;
+    string * op = new string("%%");
+    $$ = op;
   }
   | '*' {
-    string op = "*";
-    $$ = &op;
+    string * op = new string("*");
+    $$ = op;
   }
   | '/' {
-    string op = "/";
-    $$ = &op;
+    string * op = new string("/");
+    $$ = op;
   }
   ;
 
 BinaryOp2
   : '+' {
-    string op = "+";
-    $$ = &op;
+    string * op = new string("+");
+    $$ = op;
   }
   | '-' {
-    string op = "-";
-    $$ = &op;
+    string * op = new string("-");
+    $$ = op;
   }
   ;
 
 RelOp
   : '<' {
-    string op = "<";
-    $$ = &op;
+    string * op = new string("<");
+    $$ = op;
   }
   | '>' {
-    string op = ">";
-    $$ = &op;
+    string * op = new string(">");
+    $$ = op;
   }
   | '<' '=' {
-    string op = "<=";
-    $$ = &op;
+    string * op = new string("<=");
+    $$ = op;
   }
   | '>' '=' {
-    string op = ">=";
-    $$ = &op;
+    string * op = new string(">=");
+    $$ = op;
   }
   ;
 
 EqOp
   : '=' '=' {
-    string op = "==";
-    $$ = &op;
+    string * op = new string("==");
+    $$ = op;
   }
   | '!' '=' {
-    string op = "!=";
-    $$ = &op;
+    string * op = new string("!=");
+    $$ = op;
   }
   ;
 
