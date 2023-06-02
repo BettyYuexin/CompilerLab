@@ -85,7 +85,7 @@ FuncDef
 FuncType
   : INT {
     auto ast = new FuncTypeAST();
-    ast->type = *unique_ptr<string>(new string("i32"));
+    ast->type = "i32";
     $$ = ast;
   }
   ;
@@ -117,13 +117,13 @@ Exp
 PrimaryExp
   : '(' Exp ')' {
     auto ast = new PrimaryExpAST();
-    ast->parseType = *unique_ptr<string>(new string("exp"));
+    ast->parseType = "exp";
     ast->exp = unique_ptr<BaseAST>($2);
     $$ = ast;
   }
   | Number {
     auto ast = new PrimaryExpAST();
-    ast->parseType = *unique_ptr<string>(new string("number"));
+    ast->parseType = "number";
     ast->number = $1;
     $$ = ast;
   }
@@ -138,13 +138,13 @@ Number
 UnaryExp
   : PrimaryExp {
     auto ast = new UnaryExpAST();
-    ast->parseType = *unique_ptr<string>(new string("primary"));
+    ast->parseType = "primary";
     ast->primaryExp = unique_ptr<BaseAST>($1);
     $$ = ast;
   }
   | UnaryOp UnaryExp {
     auto ast = new UnaryExpAST();
-    ast->parseType = *unique_ptr<string>(new string("uop"));
+    ast->parseType = "uop";
     ast->unaryOp = *($1);
     ast->unaryExp = unique_ptr<BaseAST>($2);
     $$ = ast;
@@ -170,13 +170,13 @@ MulExp
   : UnaryExp {
     auto ast = new MulExpAST();
     ast->unaryExp = unique_ptr<BaseAST>($1);
-    ast->parseType = *unique_ptr<string>(new string("unaryExp"));
+    ast->parseType = "unaryExp";
     $$ = ast;
   }
   | MulExp BinaryOp1 UnaryExp {
     auto ast = new MulExpAST();
     ast->mulExp = unique_ptr<BaseAST>($1);
-    ast->parseType = *unique_ptr<string>(new string("bin"));
+    ast->parseType = "bin";
     ast->op = *($2);
     ast->unaryExp = unique_ptr<BaseAST>($3);
     $$ = ast;
@@ -187,13 +187,13 @@ AddExp
   : MulExp {
     auto ast = new AddExpAST();
     ast->mulExp = unique_ptr<BaseAST>($1);
-    ast->parseType = *unique_ptr<string>(new string("multExp"));
+    ast->parseType = "multExp";
     $$ = ast;
   }
   | AddExp BinaryOp2 MulExp {
     auto ast = new AddExpAST();
     ast->addExp = unique_ptr<BaseAST>($1);
-    ast->parseType = *unique_ptr<string>(new string("bin"));
+    ast->parseType = "bin";
     ast->op = *($2);
     ast->mulExp = unique_ptr<BaseAST>($3);
     $$ = ast;
@@ -204,13 +204,13 @@ RelExp
   : AddExp {
     auto ast = new RelExpAST();
     ast->addExp = unique_ptr<BaseAST>($1);
-    ast->parseType = *unique_ptr<string>(new string("addExp"));
+    ast->parseType = "addExp";
     $$ = ast;
   }
   | RelExp RelOp AddExp {
     auto ast = new RelExpAST();
     ast->relExp = unique_ptr<BaseAST>($1);
-    ast->parseType = *unique_ptr<string>(new string("bin"));
+    ast->parseType = "bin";
     ast->op = *($2);
     ast->addExp = unique_ptr<BaseAST>($3);
     $$ = ast;
@@ -221,13 +221,13 @@ EqExp
   : RelExp {
     auto ast = new EqExpAST();
     ast->relExp = unique_ptr<BaseAST>($1);
-    ast->parseType = *unique_ptr<string>(new string("relExp"));
+    ast->parseType = "relExp";
     $$ = ast;
   }
   | EqExp EqOp RelExp {
     auto ast = new EqExpAST();
     ast->eqExp = unique_ptr<BaseAST>($1);
-    ast->parseType = *unique_ptr<string>(new string("bin"));
+    ast->parseType = "bin";
     ast->op = *($2);
     ast->relExp = unique_ptr<BaseAST>($3);
     $$ = ast;
@@ -238,14 +238,14 @@ LAndExp
   : EqExp {
     auto ast = new LAndExpAST();
     ast->eqExp = unique_ptr<BaseAST>($1);
-    ast->parseType = *unique_ptr<string>(new string("eqExp"));
+    ast->parseType = "eqExp";
     $$ = ast;
   }
   | LAndExp '&' '&' EqExp {
     auto ast = new LAndExpAST();
     ast->lAndExp = unique_ptr<BaseAST>($1);
-    ast->parseType = *unique_ptr<string>(new string("bin"));
-    ast->op = *unique_ptr<string>(new string("&&"));
+    ast->parseType = "bin";
+    ast->op = "&&";
     ast->eqExp = unique_ptr<BaseAST>($4);
     $$ = ast;
   }
@@ -255,14 +255,14 @@ LOrExp
   : LAndExp {
     auto ast = new LOrExpAST();
     ast->lAndExp = unique_ptr<BaseAST>($1);
-    ast->parseType = *unique_ptr<string>(new string("lAndExp"));
+    ast->parseType = "lAndExp";
     $$ = ast;
   }
   | LOrExp '|' '|' LAndExp {
     auto ast = new LOrExpAST();
     ast->lOrExp = unique_ptr<BaseAST>($1);
-    ast->parseType = *unique_ptr<string>(new string("bin"));
-    ast->op = *unique_ptr<string>(new string("||"));
+    ast->parseType = "bin";
+    ast->op = "||";
     ast->lAndExp = unique_ptr<BaseAST>($4);
     $$ = ast;
   }
