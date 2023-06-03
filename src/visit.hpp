@@ -11,11 +11,15 @@
 #include "koopa.h"
 using namespace std;
 // #define _DEBUG
+#define REG_CNT 15
 
-
-string tempRegName[15] = {"t0", "t1", "t2", "t3", "t4", "t5", "t6", "a0", "a1", "a2", "a3", "a4", "a5", "a6", "a7"};
+string tempRegName[REG_CNT] = {"t0", "t1", "t2", "t3", "t4", "t5", "t6", "a0", "a1", "a2", "a3", "a4", "a5", "a6", "a7"};
 static map<long, string> insts_table;
 static int regCnt = 0;
+static bool regVisited[REG_CNT] = {};
+static map<string, int> regName2ID {
+  
+};
 
 // 函数声明
 void Visit(const koopa_raw_program_t&);
@@ -31,6 +35,23 @@ string getVarName(const koopa_raw_value_t&);
 string allocInstsTable(long);
 string getVarName(long);
 bool visitedInst(long);
+int getNextRegID();
+
+
+int getNextRegID() {
+  int cnt = 0;
+  while(regVisited[regCnt] && cnt < REG_CNT) {
+    regCnt = (regCnt + 1) % REG_CNT;
+    cnt++;
+  }
+  if(cnt == REG_CNT) {
+    assert(false);
+  }
+  regVisited[regCnt] = true;
+  return regCnt;
+}
+
+void releaseReg()
 
 string allocInstsTable(long ptr) {
   string regName = tempRegName[regCnt];
