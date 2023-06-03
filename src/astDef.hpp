@@ -165,7 +165,7 @@ public:
             else if(!strcmp(op.c_str(), "/")) {
                 cout << "\t%" << tempID << " = div " << mulExp->variableName << ", " << unaryExp->variableName << "\n";
             }
-            else if(!strcmp(op.c_str(), "%")) {
+            else if(!strcmp(op.c_str(), "%%")) {
                 cout << "\t%" << tempID << " = mod " << mulExp->variableName << ", " << unaryExp->variableName << "\n";
             }
             variableName = "%" + to_string(tempID);
@@ -372,7 +372,11 @@ public:
             lAndExp->Dump();
             eqExp->Dump();
             if(!strcmp(op.c_str(), "&&")) {
-                cout << "\t%" << tempID << " = and " << lAndExp->variableName << ", " << eqExp->variableName << "\n";
+                cout << "\t%" << tempID << " = ne " << lAndExp->variableName << ", 0\n";
+                tempID++;
+                cout << "\t%" << tempID << " = ne " << eqExp->variableName << ", 0\n";
+                tempID++;
+                cout << "\t%" << tempID << " = and %" << tempID - 2 << ", %" << tempID - 1 << "\n";
             }
             else {
                 assert(false);
@@ -407,6 +411,8 @@ public:
             lAndExp->Dump();
             if(!strcmp(op.c_str(), "||")) {
                 cout << "\t%" << tempID << " = or " << lOrExp->variableName << ", " << lAndExp->variableName << "\n";
+                tempID++;
+                cout << "\t%" << tempID << " = ne %" << tempID - 1 << ", 0\n";
             }
             else {
                 assert(false);

@@ -13,7 +13,7 @@ using namespace std;
 // #define _DEBUG
 
 
-string tempRegName[14] = {"t0", "t1", "t2", "t3", "t4", "t5", "t6", "a1", "a2", "a3", "a4", "a5", "a6", "a7"};
+string tempRegName[15] = {"t0", "t1", "t2", "t3", "t4", "t5", "t6", "a0", "a1", "a2", "a3", "a4", "a5", "a6", "a7"};
 static map<long, string> insts_table;
 static int regCnt = 0;
 
@@ -199,7 +199,9 @@ void Visit(const koopa_raw_return_t &ret) {
   #endif
 
   string regName = getVarName(ret.value);
-  cout << "\tmv\t\ta0, " << regName << endl;;
+  if(strcmp(regName.c_str(), "a0"))
+    cout << "\tmv\t\ta0, " << regName << endl;
+
   cout << "\tret\n";
 
   #ifdef _DEBUG
@@ -272,7 +274,7 @@ void Visit(const koopa_raw_binary_t &bin_val) {
       break;
     }
     case KOOPA_RBO_MOD: { 
-      cout << "\tmod\t\t" << saveReg << ",\t" << lhsName << ",\t" << rhsName << endl;
+      cout << "\trem\t\t" << saveReg << ",\t" << lhsName << ",\t" << rhsName << endl;
       break;
     }
     case KOOPA_RBO_AND: {
