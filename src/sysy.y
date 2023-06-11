@@ -42,8 +42,9 @@ using namespace std;
 %token <int_val> INT_CONST
 
 // 非终结符的类型定义
-%type <ast_val> FuncDef FuncType Block Stmt
+%type <ast_val> FuncDef FuncType Block Stmt Exp PrimaryExp UnaryExp AddExp MulExp RelExp EqExp LAndExp LOrExp
 %type <int_val> Number
+%type <str_val> UnaryOp BinaryOp1 BinaryOp2 RelOp EqOp
 
 %%
 
@@ -84,7 +85,7 @@ FuncDef
 FuncType
   : INT {
     auto ast = new FuncTypeAST();
-    ast->type = *unique_ptr<string>(new string("i32"));
+    ast->type = "i32";
     $$ = ast;
   }
   ;
@@ -98,9 +99,32 @@ Block
   ;
 
 Stmt
-  : RETURN Number ';' {
+  : RETURN Exp ';' {
     auto ast = new StmtAST();
-    ast->number = $2;
+    ast->exp = unique_ptr<BaseAST>($2);
+    $$ = ast;
+  }
+  ;
+
+Exp
+  : LOrExp {
+    auto ast = new ExpAST();
+    ast->lOrExp = unique_ptr<BaseAST>($1);
+    $$ = ast;
+  }
+  ;
+
+PrimaryExp
+  : '(' Exp ')' {
+    auto ast = new PrimaryExpAST();
+    ast->parseType = "exp";
+    ast->exp = unique_ptr<BaseAST>($2);
+    $$ = ast;
+  }
+  | Number {
+    auto ast = new PrimaryExpAST();
+    ast->parseType = "number";
+    ast->number = $1;
     $$ = ast;
   }
   ;
@@ -108,6 +132,195 @@ Stmt
 Number
   : INT_CONST {
     $$ = $1;
+  }
+  ;
+
+UnaryExp
+  : PrimaryExp {
+    auto ast = new UnaryExpAST();
+    ast->parseType = "primary";
+    ast->primaryExp = unique_ptr<BaseAST>($1);
+    $$ = ast;
+  }
+  | UnaryOp UnaryExp {
+    auto ast = new UnaryExpAST();
+    ast->parseType = "uop";
+    ast->unaryOp = *unique_ptr<string>($1);
+    ast->unaryExp = unique_ptr<BaseAST>($2);
+    $$ = ast;
+  }
+  ;
+
+UnaryOp
+  : '+' {
+    string * op = new string("+");
+    $$ = op;
+  }
+  | '-' {
+    string * op = new string("-");
+    $$ = op;
+  }
+  | '!' {
+    string * op = new string("!");
+    $$ = op;
+  }
+  ;
+
+MulExp
+  : UnaryExp {
+    auto ast = new MulExpAST();
+    ast->unaryExp = unique_ptr<BaseAST>($1);
+    ast->parseType = "unaryExp";
+    $$ = ast;
+  }
+  | MulExp BinaryOp1 UnaryExp {
+    auto ast = new MulExpAST();
+    ast->mulExp = unique_ptr<BaseAST>($1);
+    ast->parseType = "bin";
+    ast->op = *unique_ptr<string>($2);
+    ast->unaryExp = unique_ptr<BaseAST>($3);
+    $$ = ast;
+  }
+  ;
+
+AddExp
+  : MulExp {
+    auto ast = new AddExpAST();
+    ast->mulExp = unique_ptr<BaseAST>($1);
+    ast->parseType = "multExp";
+    $$ = ast;
+  }
+  | AddExp BinaryOp2 MulExp {
+    auto ast = new AddExpAST();
+    ast->addExp = unique_ptr<BaseAST>($1);
+    ast->parseType = "bin";
+    ast->op = *unique_ptr<string>($2);
+    ast->mulExp = unique_ptr<BaseAST>($3);
+    $$ = ast;
+  }
+  ;
+
+RelExp
+  : AddExp {
+    auto ast = new RelExpAST();
+    ast->addExp = unique_ptr<BaseAST>($1);
+    ast->parseType = "addExp";
+    $$ = ast;
+  }
+  | RelExp RelOp AddExp {
+    auto ast = new RelExpAST();
+    ast->relExp = unique_ptr<BaseAST>($1);
+    ast->parseType = "bin";
+    ast->op = *unique_ptr<string>($2);
+    ast->addExp = unique_ptr<BaseAST>($3);
+    $$ = ast;
+  }
+  ;
+
+EqExp
+  : RelExp {
+    auto ast = new EqExpAST();
+    ast->relExp = unique_ptr<BaseAST>($1);
+    ast->parseType = "relExp";
+    $$ = ast;
+  }
+  | EqExp EqOp RelExp {
+    auto ast = new EqExpAST();
+    ast->eqExp = unique_ptr<BaseAST>($1);
+    ast->parseType = "bin";
+    ast->op = *unique_ptr<string>($2);
+    ast->relExp = unique_ptr<BaseAST>($3);
+    $$ = ast;
+  }
+  ;
+
+LAndExp
+  : EqExp {
+    auto ast = new LAndExpAST();
+    ast->eqExp = unique_ptr<BaseAST>($1);
+    ast->parseType = "eqExp";
+    $$ = ast;
+  }
+  | LAndExp '&' '&' EqExp {
+    auto ast = new LAndExpAST();
+    ast->lAndExp = unique_ptr<BaseAST>($1);
+    ast->parseType = "bin";
+    ast->op = "&&";
+    ast->eqExp = unique_ptr<BaseAST>($4);
+    $$ = ast;
+  }
+  ;
+
+LOrExp
+  : LAndExp {
+    auto ast = new LOrExpAST();
+    ast->lAndExp = unique_ptr<BaseAST>($1);
+    ast->parseType = "lAndExp";
+    $$ = ast;
+  }
+  | LOrExp '|' '|' LAndExp {
+    auto ast = new LOrExpAST();
+    ast->lOrExp = unique_ptr<BaseAST>($1);
+    ast->parseType = "bin";
+    ast->op = "||";
+    ast->lAndExp = unique_ptr<BaseAST>($4);
+    $$ = ast;
+  }
+  ;
+
+BinaryOp1
+  : '%' {
+    string * op = new string("%%");
+    $$ = op;
+  }
+  | '*' {
+    string * op = new string("*");
+    $$ = op;
+  }
+  | '/' {
+    string * op = new string("/");
+    $$ = op;
+  }
+  ;
+
+BinaryOp2
+  : '+' {
+    string * op = new string("+");
+    $$ = op;
+  }
+  | '-' {
+    string * op = new string("-");
+    $$ = op;
+  }
+  ;
+
+RelOp
+  : '<' {
+    string * op = new string("<");
+    $$ = op;
+  }
+  | '>' {
+    string * op = new string(">");
+    $$ = op;
+  }
+  | '<' '=' {
+    string * op = new string("<=");
+    $$ = op;
+  }
+  | '>' '=' {
+    string * op = new string(">=");
+    $$ = op;
+  }
+  ;
+
+EqOp
+  : '=' '=' {
+    string * op = new string("==");
+    $$ = op;
+  }
+  | '!' '=' {
+    string * op = new string("!=");
+    $$ = op;
   }
   ;
 
