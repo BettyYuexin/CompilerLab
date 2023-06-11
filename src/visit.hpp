@@ -17,9 +17,9 @@ string tempRegName[REG_CNT] = {"t0", "t1", "t2", "t3", "t4", "t5", "t6", "a0", "
 static map<long, string> insts_table;
 static int regCnt = 0;
 static bool regVisited[REG_CNT] = {};
-static map<string, int> regName2ID {
+// static map<string, int> regName2ID {
   
-};
+// };
 
 // 函数声明
 void Visit(const koopa_raw_program_t&);
@@ -51,7 +51,9 @@ int getNextRegID() {
   return regCnt;
 }
 
-void releaseReg()
+void releaseReg() {
+  
+}
 
 string allocInstsTable(long ptr) {
   string regName = tempRegName[regCnt];

@@ -13,6 +13,8 @@
 
 using namespace std;
 
+// #define DEBUG_MAIN
+
 // 声明 lexer 的输入, 以及 parser 函数
 // 为什么不引用 sysy.tab.hpp 呢? 因为首先里面没有 yyin 的定义
 // 其次, 因为这个文件不是我们自己写的, 而是被 Bison 生成出来的
@@ -41,12 +43,15 @@ int main(int argc, const char *argv[]) {
   assert(!ret);
 
   // 输出解析得到的 AST, 其实就是个字符串
+  #ifndef DEBUG_MAIN
   stringstream ss;
   streambuf * coutBuffer = cout.rdbuf();
   cout.rdbuf(ss.rdbuf());
+  #endif
 
   ast->Dump();
 
+  #ifndef DEBUG_MAIN
   string text = ss.str();
   cout.rdbuf(coutBuffer);
 
@@ -90,6 +95,8 @@ int main(int argc, const char *argv[]) {
     fwrite(riscv_result.c_str(), sizeof(char), riscv_result.length(), outFile);
     assert(!fclose(outFile));
   }
+
+  #endif
 
 
 

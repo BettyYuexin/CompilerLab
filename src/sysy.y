@@ -37,22 +37,20 @@ using namespace std;
 
 // lexer 返回的所有 token 种类的声明
 // 注意 IDENT 和 INT_CONST 会返回 token 的值, 分别对应 str_val 和 int_val
-%token INT RETURN
+%token INT RETURN CONST
 %token <str_val> IDENT
 %token <int_val> INT_CONST
 
 // 非终结符的类型定义
-%type <ast_val> FuncDef FuncType Block Stmt Exp PrimaryExp UnaryExp AddExp MulExp RelExp EqExp LAndExp LOrExp
+%type <ast_val> Decl ConstDecl ConstDeclRec ConstDef ConstInitVal FuncDef 
+%type <ast_val> FuncType Block BlockItemRec BlockItem Stmt Exp PrimaryExp
+%type <ast_val> UnaryExp AddExp MulExp RelExp EqExp LAndExp LOrExp ConstExp
 %type <int_val> Number
-%type <str_val> UnaryOp BinaryOp1 BinaryOp2 RelOp EqOp
+%type <str_val> UnaryOp BinaryOp1 BinaryOp2 RelOp EqOp BType LVal
 
 %%
 
-// 开始符, CompUnit ::= FuncDef, 大括号后声明了解析完成后 parser 要做的事情
-// 之前我们定义了 FuncDef 会返回一个 str_val, 也就是字符串指针
-// 而 parser 一旦解析完 CompUnit, 就说明所有的 token 都被解析了, 即解析结束了
-// 此时我们应该把 FuncDef 返回的结果收集起来, 作为 AST 传给调用 parser 的函数
-// $1 指代规则里第一个符号的返回值, 也就是 FuncDef 的返回值
+
 CompUnit
   : FuncDef {
     auto comp_unit = make_unique<CompUnitAST>();
@@ -61,16 +59,75 @@ CompUnit
   }
   ;
 
-// FuncDef ::= FuncType IDENT '(' ')' Block;
-// 我们这里可以直接写 '(' 和 ')', 因为之前在 lexer 里已经处理了单个字符的情况
-// 解析完成后, 把这些符号的结果收集起来, 然后拼成一个新的字符串, 作为结果返回
-// $$ 表示非终结符的返回值, 我们可以通过给这个符号赋值的方法来返回结果
-// 你可能会问, FuncType, IDENT 之类的结果已经是字符串指针了
-// 为什么还要用 unique_ptr 接住它们, 然后再解引用, 把它们拼成另一个字符串指针呢
-// 因为所有的字符串指针都是我们 new 出来的, new 出来的内存一定要 delete
-// 否则会发生内存泄漏, 而 unique_ptr 这种智能指针可以自动帮我们 delete
-// 虽然此处你看不出用 unique_ptr 和手动 delete 的区别, 但当我们定义了 AST 之后
-// 这种写法会省下很多内存管理的负担
+Decl
+  : ConstDecl {
+    auto ast = new DeclAST();
+    ast->const_decl = unique_ptr<BaseAST>($1);
+    $$ = ast;
+  }
+  // | VarDecl {
+
+  // }
+  ;
+
+ConstDecl
+  : CONST BType ConstDeclRec ';' {
+    auto ast = new ConstDeclAST();
+    ast->type = *unique_ptr<string>($2);
+    ast->const_decl_rec = unique_ptr<BaseAST>($3);
+    $$ = ast;
+  }
+  ;
+
+ConstDeclRec
+  : ConstDef{
+    auto ast = new ConstDeclRecAST();
+    ast->const_def = unique_ptr<BaseAST>($1);
+    ast->parse_type = "constDef";
+    $$ = ast;
+  }
+  | ConstDeclRec ',' ConstDef {
+    auto ast = new ConstDeclRecAST();
+    ast->const_decl_rec = unique_ptr<BaseAST>($1);
+    ast->const_def = unique_ptr<BaseAST>($3);
+    ast->parse_type = "rec";
+    $$ = ast;
+  }
+  ;
+
+BType
+  : INT {
+    string * s = new string("int");
+    $$ = s;
+  };
+
+// 定义常量
+ConstDef
+  : IDENT '=' ConstInitVal {
+    auto ast = new ConstDefAST();
+    ast->ident = *unique_ptr<string>($1);
+    ast->const_init_val = unique_ptr<BaseAST>($3);
+    $$ = ast;
+  };
+
+ConstInitVal
+  : ConstExp{
+    auto ast = new ConstInitValAST();
+    ast->const_exp = unique_ptr<BaseAST>($1);
+    $$ = ast;
+  };
+
+// VarDecl
+//   : BType VarDef {"," VarDef} ';' {};
+
+// 定义变量，第一种方式中实际初始值未定义
+// VarDef 
+//   : IDENT {}
+//   | IDENT '=' InitVal {};
+
+// InitVal
+//   : Exp {};
+
 FuncDef
   : FuncType IDENT '(' ')' Block {
     auto ast = new FuncDefAST();
@@ -90,13 +147,50 @@ FuncType
   }
   ;
 
+// Block内不允许声明重名的变量或常量，在定义到此语句块尾的范围内有效
+// 变量/常量的名字可以是main
 Block
-  : '{' Stmt '}' {
+  : '{' BlockItemRec '}' {
     auto ast = new BlockAST();
-    ast->stmt = unique_ptr<BaseAST>($2);
+    ast->block_item_rec = unique_ptr<BaseAST>($2);
     $$ = ast;
   }
   ;
+
+BlockItemRec
+  : {
+    auto ast = new BlockItemRecAST();
+    ast->parse_type = "empty";
+    $$ = ast;
+  }
+  | BlockItem {
+    auto ast = new BlockItemRecAST();
+    ast->block_item = unique_ptr<BaseAST>($1);
+    ast->parse_type = "single";
+    $$ = ast;
+  }
+  | BlockItemRec BlockItem {
+    auto ast = new BlockItemRecAST();
+    ast->block_item_rec = unique_ptr<BaseAST>($1);
+    ast->block_item = unique_ptr<BaseAST>($2);
+    ast->parse_type = "rec";
+    $$ = ast;
+  }
+  ;
+
+BlockItem
+  : Decl {
+    auto ast = new BlockItemAST();
+    ast->decl = unique_ptr<BaseAST>($1);
+    ast->parse_type = "decl";
+    $$ = ast;
+  }
+  | Stmt {
+    auto ast = new BlockItemAST();
+    ast->stmt = unique_ptr<BaseAST>($1);
+    ast->parse_type = "stmt";
+    $$ = ast;
+  };
 
 Stmt
   : RETURN Exp ';' {
@@ -104,27 +198,40 @@ Stmt
     ast->exp = unique_ptr<BaseAST>($2);
     $$ = ast;
   }
+  // | LVal '=' Exp ';' {}
   ;
 
+// Exp内出现的LVal必须是之前定义过的
 Exp
   : LOrExp {
     auto ast = new ExpAST();
-    ast->lOrExp = unique_ptr<BaseAST>($1);
+    ast->l_or_exp = unique_ptr<BaseAST>($1);
     $$ = ast;
   }
   ;
 
+LVal
+  : IDENT {
+    $$ = $1;
+  };
+
 PrimaryExp
   : '(' Exp ')' {
     auto ast = new PrimaryExpAST();
-    ast->parseType = "exp";
+    ast->parse_type = "exp";
     ast->exp = unique_ptr<BaseAST>($2);
     $$ = ast;
   }
   | Number {
     auto ast = new PrimaryExpAST();
-    ast->parseType = "number";
+    ast->parse_type = "number";
     ast->number = $1;
+    $$ = ast;
+  }
+  | LVal {
+    auto ast = new PrimaryExpAST();
+    ast->parse_type = "lval";
+    ast->lval = *unique_ptr<string>($1);
     $$ = ast;
   }
   ;
@@ -138,15 +245,15 @@ Number
 UnaryExp
   : PrimaryExp {
     auto ast = new UnaryExpAST();
-    ast->parseType = "primary";
-    ast->primaryExp = unique_ptr<BaseAST>($1);
+    ast->parse_type = "primary";
+    ast->primary_exp = unique_ptr<BaseAST>($1);
     $$ = ast;
   }
   | UnaryOp UnaryExp {
     auto ast = new UnaryExpAST();
-    ast->parseType = "uop";
-    ast->unaryOp = *unique_ptr<string>($1);
-    ast->unaryExp = unique_ptr<BaseAST>($2);
+    ast->parse_type = "uop";
+    ast->unary_op = *unique_ptr<string>($1);
+    ast->unary_exp = unique_ptr<BaseAST>($2);
     $$ = ast;
   }
   ;
@@ -169,16 +276,16 @@ UnaryOp
 MulExp
   : UnaryExp {
     auto ast = new MulExpAST();
-    ast->unaryExp = unique_ptr<BaseAST>($1);
-    ast->parseType = "unaryExp";
+    ast->unary_exp = unique_ptr<BaseAST>($1);
+    ast->parse_type = "unaryExp";
     $$ = ast;
   }
   | MulExp BinaryOp1 UnaryExp {
     auto ast = new MulExpAST();
-    ast->mulExp = unique_ptr<BaseAST>($1);
-    ast->parseType = "bin";
+    ast->mul_exp = unique_ptr<BaseAST>($1);
+    ast->parse_type = "bin";
     ast->op = *unique_ptr<string>($2);
-    ast->unaryExp = unique_ptr<BaseAST>($3);
+    ast->unary_exp = unique_ptr<BaseAST>($3);
     $$ = ast;
   }
   ;
@@ -186,16 +293,16 @@ MulExp
 AddExp
   : MulExp {
     auto ast = new AddExpAST();
-    ast->mulExp = unique_ptr<BaseAST>($1);
-    ast->parseType = "multExp";
+    ast->mul_exp = unique_ptr<BaseAST>($1);
+    ast->parse_type = "multExp";
     $$ = ast;
   }
   | AddExp BinaryOp2 MulExp {
     auto ast = new AddExpAST();
-    ast->addExp = unique_ptr<BaseAST>($1);
-    ast->parseType = "bin";
+    ast->add_exp = unique_ptr<BaseAST>($1);
+    ast->parse_type = "bin";
     ast->op = *unique_ptr<string>($2);
-    ast->mulExp = unique_ptr<BaseAST>($3);
+    ast->mul_exp = unique_ptr<BaseAST>($3);
     $$ = ast;
   }
   ;
@@ -203,16 +310,16 @@ AddExp
 RelExp
   : AddExp {
     auto ast = new RelExpAST();
-    ast->addExp = unique_ptr<BaseAST>($1);
-    ast->parseType = "addExp";
+    ast->add_exp = unique_ptr<BaseAST>($1);
+    ast->parse_type = "addExp";
     $$ = ast;
   }
   | RelExp RelOp AddExp {
     auto ast = new RelExpAST();
-    ast->relExp = unique_ptr<BaseAST>($1);
-    ast->parseType = "bin";
+    ast->rel_exp = unique_ptr<BaseAST>($1);
+    ast->parse_type = "bin";
     ast->op = *unique_ptr<string>($2);
-    ast->addExp = unique_ptr<BaseAST>($3);
+    ast->add_exp = unique_ptr<BaseAST>($3);
     $$ = ast;
   }
   ;
@@ -220,16 +327,16 @@ RelExp
 EqExp
   : RelExp {
     auto ast = new EqExpAST();
-    ast->relExp = unique_ptr<BaseAST>($1);
-    ast->parseType = "relExp";
+    ast->rel_exp = unique_ptr<BaseAST>($1);
+    ast->parse_type = "relExp";
     $$ = ast;
   }
   | EqExp EqOp RelExp {
     auto ast = new EqExpAST();
-    ast->eqExp = unique_ptr<BaseAST>($1);
-    ast->parseType = "bin";
+    ast->eq_exp = unique_ptr<BaseAST>($1);
+    ast->parse_type = "bin";
     ast->op = *unique_ptr<string>($2);
-    ast->relExp = unique_ptr<BaseAST>($3);
+    ast->rel_exp = unique_ptr<BaseAST>($3);
     $$ = ast;
   }
   ;
@@ -237,16 +344,16 @@ EqExp
 LAndExp
   : EqExp {
     auto ast = new LAndExpAST();
-    ast->eqExp = unique_ptr<BaseAST>($1);
-    ast->parseType = "eqExp";
+    ast->eq_exp = unique_ptr<BaseAST>($1);
+    ast->parse_type = "eqExp";
     $$ = ast;
   }
   | LAndExp '&' '&' EqExp {
     auto ast = new LAndExpAST();
-    ast->lAndExp = unique_ptr<BaseAST>($1);
-    ast->parseType = "bin";
+    ast->l_and_exp = unique_ptr<BaseAST>($1);
+    ast->parse_type = "bin";
     ast->op = "&&";
-    ast->eqExp = unique_ptr<BaseAST>($4);
+    ast->eq_exp = unique_ptr<BaseAST>($4);
     $$ = ast;
   }
   ;
@@ -254,16 +361,24 @@ LAndExp
 LOrExp
   : LAndExp {
     auto ast = new LOrExpAST();
-    ast->lAndExp = unique_ptr<BaseAST>($1);
-    ast->parseType = "lAndExp";
+    ast->l_and_exp = unique_ptr<BaseAST>($1);
+    ast->parse_type = "lAndExp";
     $$ = ast;
   }
   | LOrExp '|' '|' LAndExp {
     auto ast = new LOrExpAST();
-    ast->lOrExp = unique_ptr<BaseAST>($1);
-    ast->parseType = "bin";
+    ast->l_or_exp = unique_ptr<BaseAST>($1);
+    ast->parse_type = "bin";
     ast->op = "||";
-    ast->lAndExp = unique_ptr<BaseAST>($4);
+    ast->l_and_exp = unique_ptr<BaseAST>($4);
+    $$ = ast;
+  }
+  ;
+
+ConstExp
+  : Exp {
+    auto ast = new ConstExpAST();
+    ast->exp = unique_ptr<BaseAST>($1);
     $$ = ast;
   }
   ;
