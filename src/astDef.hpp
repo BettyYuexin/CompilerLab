@@ -75,8 +75,12 @@ public:
     int val;
 
     virtual ~BaseAST() = default;
-
     virtual void Dump() = 0;
+};
+
+class ComputeBaseAST : public BaseAST {
+public:
+    virtual void Compute() = 0;
 };
 
 // CompUnit 是 BaseAST
@@ -86,15 +90,7 @@ public:
     unique_ptr<BaseAST> func_def;
     
     void Dump() override {
-        #ifdef _DEBUG
-        cout << "CompUnitAST {\n";
-        #endif
-
         func_def->Dump();
-
-        #ifdef _DEBUG
-        cout << "}\n";
-        #endif
     }
 };
 
@@ -107,9 +103,7 @@ public:
         #ifdef _DEBUG
         cout << "DeclAST {\n";
         #endif
-
         const_decl->Dump();
-
         #ifdef _DEBUG
         cout << "}\n";
         #endif
@@ -161,22 +155,21 @@ public:
     }
 };
 
-
 class ConstDefAST : public BaseAST {
 public:
     string ident;
-    unique_ptr<BaseAST> const_init_val;
+    unique_ptr<ComputeBaseAST> const_init_val;
     
     void Dump() override {
         #ifdef _DEBUG
         cout << "ConstDefAST {\n";
         #endif
 
-        const_init_val->Dump();
+        const_init_val->Compute();
         variable_name = ident;
         val = const_init_val->val;
         symbolTable.insert(variable_name, val, true);
-
+        
         #ifdef _DEBUG
         cout << "insert " << variable_name << " " << val << endl; 
         cout << "}\n";
@@ -184,25 +177,18 @@ public:
     }
 };
 
-class ConstInitValAST : public BaseAST {
+class ConstInitValAST : public ComputeBaseAST {
 public:
-    unique_ptr<BaseAST> const_exp;
+    unique_ptr<ComputeBaseAST> const_exp;
     
     void Dump() override {
-        #ifdef _DEBUG
-        cout << "ConstInitValAST {\n";
-        #endif
-
         const_exp->Dump();
-        variable_name = const_exp->variable_name;
+    }
+    void Compute() override {
+        const_exp->Compute();
         val = const_exp->val;
-
-        #ifdef _DEBUG
-        cout << "}\n";
-        #endif
     }
 };
-
 
 // FuncDef 也是 BaseAST
 class FuncDefAST : public BaseAST {
@@ -326,7 +312,7 @@ public:
 
         exp->Dump();
         if(symbolTable.exists(exp->variable_name)) {
-            cout << "\tret " << exp->val << "\n";    
+            cout << "\tret " << symbolTable.getVal(exp->variable_name) << "\n";    
         }
         else {
             cout << "\tret " << exp->variable_name << "\n";
@@ -338,9 +324,9 @@ public:
     }
 };
 
-class ExpAST : public BaseAST {
+class ExpAST : public ComputeBaseAST {
 public:
-    unique_ptr<BaseAST> l_or_exp;
+    unique_ptr<ComputeBaseAST> l_or_exp;
 
     void Dump() override {
         #ifdef _DEBUG
@@ -349,18 +335,22 @@ public:
 
         l_or_exp->Dump();
         variable_name = l_or_exp->variable_name;
-        val = l_or_exp->val;
 
         #ifdef _DEBUG
         cout << "}\n";
         #endif
     }
+
+    void Compute() override {
+        l_or_exp->Compute();
+        val = l_or_exp->val;
+    }
 };
 
-class MulExpAST : public BaseAST {
+class MulExpAST : public ComputeBaseAST {
 public:
-    unique_ptr<BaseAST> mul_exp;
-    unique_ptr<BaseAST> unary_exp;
+    unique_ptr<ComputeBaseAST> mul_exp;
+    unique_ptr<ComputeBaseAST> unary_exp;
     string op;
 
     void Dump() override {
@@ -371,22 +361,18 @@ public:
         if(!strcmp( parse_type.c_str(), "unaryExp")) {
             unary_exp->Dump();
             variable_name = unary_exp->variable_name;
-            val = unary_exp->val;
         }
         else if (!strcmp( parse_type.c_str(), "bin")) {
             mul_exp->Dump();
             unary_exp->Dump();
             if(!strcmp(op.c_str(), "*")) {
                 cout << "\t%" << tempID << " = mul " << mul_exp->variable_name << ", " << unary_exp->variable_name << "\n";
-                val = mul_exp->val * unary_exp->val;
             }
             else if(!strcmp(op.c_str(), "/")) {
                 cout << "\t%" << tempID << " = div " << mul_exp->variable_name << ", " << unary_exp->variable_name << "\n";
-                val = mul_exp->val / unary_exp->val;
             }
             else if(!strcmp(op.c_str(), "%%")) {
                 cout << "\t%" << tempID << " = mod " << mul_exp->variable_name << ", " << unary_exp->variable_name << "\n";
-                val = mul_exp->val % unary_exp->val;
             }
             variable_name = "%" + to_string(tempID);
             tempID++;
@@ -396,12 +382,31 @@ public:
         cout << "}\n";
         #endif
     }
+    void Compute() override {
+        if(!strcmp( parse_type.c_str(), "unaryExp")) {
+            unary_exp->Compute();
+            val = unary_exp->val;
+        }
+        else if (!strcmp( parse_type.c_str(), "bin")) {
+            mul_exp->Compute();
+            unary_exp->Compute();
+            if(!strcmp(op.c_str(), "*")) {
+                val = mul_exp->val * unary_exp->val;
+            }
+            else if(!strcmp(op.c_str(), "/")) {
+                val = mul_exp->val / unary_exp->val;
+            }
+            else if(!strcmp(op.c_str(), "%%")) {
+                val = mul_exp->val % unary_exp->val;
+            }
+        }
+    }
 };
 
-class AddExpAST : public BaseAST {
+class AddExpAST : public ComputeBaseAST {
 public:
-    unique_ptr<BaseAST> add_exp;
-    unique_ptr<BaseAST> mul_exp;
+    unique_ptr<ComputeBaseAST> add_exp;
+    unique_ptr<ComputeBaseAST> mul_exp;
     string op;
 
     void Dump() override {
@@ -412,18 +417,15 @@ public:
         if(!strcmp( parse_type.c_str(), "multExp")) {
             mul_exp->Dump();
             variable_name = mul_exp->variable_name;
-            val = mul_exp->val;
         }
         else if (!strcmp( parse_type.c_str(), "bin")) {
             add_exp->Dump();
             mul_exp->Dump();
             if(!strcmp(op.c_str(), "+")) {
                 cout << "\t%" << tempID << " = add " << add_exp->variable_name << ", " << mul_exp->variable_name << "\n";
-                val = add_exp->val + mul_exp->val;
             }
             else if(!strcmp(op.c_str(), "-")) {
                 cout << "\t%" << tempID << " = sub " << add_exp->variable_name << ", " << mul_exp->variable_name << "\n";
-                val = add_exp->val - mul_exp->val;
             }
             variable_name = "%" + to_string(tempID);
             tempID++;
@@ -433,11 +435,27 @@ public:
         cout << "}\n";
         #endif
     }
+    void Compute() override {
+        if(!strcmp( parse_type.c_str(), "multExp")) {
+            mul_exp->Compute();
+            val = mul_exp->val;
+        }
+        else if (!strcmp( parse_type.c_str(), "bin")) {
+            add_exp->Compute();
+            mul_exp->Compute();
+            if(!strcmp(op.c_str(), "+")) {
+                val = add_exp->val + mul_exp->val;
+            }
+            else if(!strcmp(op.c_str(), "-")) {
+                val = add_exp->val - mul_exp->val;
+            }
+        }
+    }
 };
 
-class PrimaryExpAST : public BaseAST {
+class PrimaryExpAST : public ComputeBaseAST {
 public:
-    unique_ptr<BaseAST> exp;
+    unique_ptr<ComputeBaseAST> exp;
     int number;
     string lval;
 
@@ -449,27 +467,36 @@ public:
         if(!strcmp(parse_type.c_str(), "exp")) {
             exp->Dump();
             variable_name = exp->variable_name;
-            val = exp->val;
         }
         else if (!strcmp(parse_type.c_str(), "number")) {
             variable_name = to_string(number);
-            val = number;
         }
         else if (!strcmp(parse_type.c_str(), "lval")) {
             variable_name = lval;
-            val = symbolTable.getVal(variable_name);
         }
 
         #ifdef _DEBUG
         cout << "}\n";
         #endif
     }
+    void Compute() override {
+        if(!strcmp(parse_type.c_str(), "exp")) {
+            exp->Compute();
+            val = exp->val;
+        }
+        else if (!strcmp(parse_type.c_str(), "number")) {
+            val = number;
+        }
+        else if (!strcmp(parse_type.c_str(), "lval")) {
+            val = symbolTable.getVal(variable_name);
+        }
+    }
 };
 
-class UnaryExpAST : public BaseAST {
+class UnaryExpAST : public ComputeBaseAST {
 public:
-    unique_ptr<BaseAST> primary_exp;
-    unique_ptr<BaseAST> unary_exp;
+    unique_ptr<ComputeBaseAST> primary_exp;
+    unique_ptr<ComputeBaseAST> unary_exp;
     string unary_op;
 
     void Dump() override {
@@ -480,23 +507,19 @@ public:
         if(!strcmp(parse_type.c_str(), "primary")) {
             primary_exp->Dump();
             variable_name = primary_exp->variable_name;
-            val = primary_exp->val;
         }
         else if (!strcmp( parse_type.c_str(), "uop")) {
             unary_exp->Dump();
             if(!strcmp(unary_op.c_str(), "+")) {
                 // + 不生成IR
                 variable_name = unary_exp->variable_name;
-                val = unary_exp->val;
             }
             else {
                 if(!strcmp(unary_op.c_str(), "-")) {
                     cout << "\t%" << tempID << " = sub 0, " << unary_exp->variable_name << "\n";
-                    val = -(unary_exp->val);
                 }
                 else if(!strcmp(unary_op.c_str(), "!")) {
                     cout << "\t%" << tempID << " = eq " << unary_exp->variable_name << ", 0\n";
-                    val = !(unary_exp->val);
                 }
                 variable_name = "%" + to_string(tempID);
                 tempID++;
@@ -507,12 +530,32 @@ public:
         cout << "}\n";
         #endif
     }
+    void Compute() override {
+        if(!strcmp(parse_type.c_str(), "primary")) {
+            primary_exp->Compute();
+            val = primary_exp->val;
+        }
+        else if (!strcmp( parse_type.c_str(), "uop")) {
+            unary_exp->Compute();
+            if(!strcmp(unary_op.c_str(), "+")) {
+                val = unary_exp->val;
+            }
+            else {
+                if(!strcmp(unary_op.c_str(), "-")) {
+                    val = -(unary_exp->val);
+                }
+                else if(!strcmp(unary_op.c_str(), "!")) {
+                    val = !(unary_exp->val);
+                }
+            }
+        }
+    }
 };
 
-class RelExpAST : public BaseAST {
+class RelExpAST : public ComputeBaseAST {
 public:
-    unique_ptr<BaseAST> add_exp;
-    unique_ptr<BaseAST> rel_exp;
+    unique_ptr<ComputeBaseAST> add_exp;
+    unique_ptr<ComputeBaseAST> rel_exp;
     string op;
 
     void Dump() override {
@@ -523,26 +566,21 @@ public:
         if(!strcmp(parse_type.c_str(), "addExp")) {
             add_exp->Dump();
             variable_name = add_exp->variable_name;
-            val = add_exp->val;
         }
         else if (!strcmp(parse_type.c_str(), "bin")) {
             rel_exp->Dump();
             add_exp->Dump();
             if(!strcmp(op.c_str(), "<")) {
                 cout << "\t%" << tempID << " = lt " << rel_exp->variable_name << ", " << add_exp->variable_name << "\n";
-                val = (rel_exp->val < add_exp->val);
             }
             else if(!strcmp(op.c_str(), ">")) {
                 cout << "\t%" << tempID << " = gt " << rel_exp->variable_name << ", " << add_exp->variable_name << "\n";
-                val = (rel_exp->val > add_exp->val);
             }
             else if(!strcmp(op.c_str(), "<=")) {
                 cout << "\t%" << tempID << " = le " << rel_exp->variable_name << ", " << add_exp->variable_name << "\n";
-                val = (rel_exp->val <= add_exp->val);
             }
             else if(!strcmp(op.c_str(), ">=")) {
                 cout << "\t%" << tempID << " = ge " << rel_exp->variable_name << ", " << add_exp->variable_name << "\n";
-                val = (rel_exp->val >= add_exp->val);
             }
             variable_name = "%" + to_string(tempID);
             tempID++;
@@ -552,12 +590,34 @@ public:
         cout << "}\n";
         #endif
     }
+    void Compute() override {
+        if(!strcmp(parse_type.c_str(), "addExp")) {
+            add_exp->Compute();
+            val = add_exp->val;
+        }
+        else if (!strcmp(parse_type.c_str(), "bin")) {
+            rel_exp->Compute();
+            add_exp->Compute();
+            if(!strcmp(op.c_str(), "<")) {
+                val = (rel_exp->val < add_exp->val);
+            }
+            else if(!strcmp(op.c_str(), ">")) { 
+                val = (rel_exp->val > add_exp->val);
+            }
+            else if(!strcmp(op.c_str(), "<=")) {
+                val = (rel_exp->val <= add_exp->val);
+            }
+            else if(!strcmp(op.c_str(), ">=")) {
+                val = (rel_exp->val >= add_exp->val);
+            }
+        }
+    }
 };
 
-class EqExpAST : public BaseAST {
+class EqExpAST : public ComputeBaseAST {
 public:
-    unique_ptr<BaseAST> rel_exp;
-    unique_ptr<BaseAST> eq_exp;
+    unique_ptr<ComputeBaseAST> rel_exp;
+    unique_ptr<ComputeBaseAST> eq_exp;
     string op;
 
     void Dump() override {
@@ -568,21 +628,17 @@ public:
         if(!strcmp(parse_type.c_str(), "relExp")) {
             rel_exp->Dump();
             variable_name = rel_exp->variable_name;
-            val = rel_exp->val;
         }
         else if (!strcmp(parse_type.c_str(), "bin")) {
             eq_exp->Dump();
             rel_exp->Dump();
             if(!strcmp(op.c_str(), "==")) {
                 cout << "\t%" << tempID << " = eq " << eq_exp->variable_name << ", " << rel_exp->variable_name << "\n";
-                val = (eq_exp->val == rel_exp->val);
             }
             else if(!strcmp(op.c_str(), "!=")) {
                 cout << "\t%" << tempID << " = ne " << eq_exp->variable_name << ", " << rel_exp->variable_name << "\n";
-                val = (eq_exp->val != rel_exp->val);
             }
             variable_name = "%" + to_string(tempID);
-
             tempID++;
         }
 
@@ -590,12 +646,28 @@ public:
         cout << "}\n";
         #endif
     }
+    void Compute() override {
+        if(!strcmp(parse_type.c_str(), "relExp")) {
+            rel_exp->Compute();
+            val = rel_exp->val;
+        }
+        else if (!strcmp(parse_type.c_str(), "bin")) {
+            eq_exp->Compute();
+            rel_exp->Compute();
+            if(!strcmp(op.c_str(), "==")) {
+                val = (eq_exp->val == rel_exp->val);
+            }
+            else if(!strcmp(op.c_str(), "!=")) {
+                val = (eq_exp->val != rel_exp->val);
+            }
+        }
+    }
 };
 
-class LAndExpAST : public BaseAST {
+class LAndExpAST : public ComputeBaseAST {
 public:
-    unique_ptr<BaseAST> eq_exp;
-    unique_ptr<BaseAST> l_and_exp;
+    unique_ptr<ComputeBaseAST> eq_exp;
+    unique_ptr<ComputeBaseAST> l_and_exp;
     string op;
 
     void Dump() override {
@@ -606,7 +678,6 @@ public:
         if(!strcmp( parse_type.c_str(), "eqExp")) {
             eq_exp->Dump();
             variable_name = eq_exp->variable_name;
-            val = eq_exp->val;
         }
         else if (!strcmp( parse_type.c_str(), "bin")) {
             l_and_exp->Dump();
@@ -622,7 +693,6 @@ public:
                 assert(false);
             }
             variable_name = "%" + to_string(tempID);
-            val = l_and_exp->val && eq_exp->val;
             tempID++;
         }
 
@@ -630,12 +700,23 @@ public:
         cout << "}\n";
         #endif
     }
+    void Compute() override {
+        if(!strcmp( parse_type.c_str(), "eqExp")) {
+            eq_exp->Compute();
+            val = eq_exp->val;
+        }
+        else if (!strcmp( parse_type.c_str(), "bin")) {
+            l_and_exp->Compute();
+            eq_exp->Compute();
+            val = l_and_exp->val && eq_exp->val;
+        }
+    }
 };
 
-class LOrExpAST : public BaseAST {
+class LOrExpAST : public ComputeBaseAST {
 public:
-    unique_ptr<BaseAST> l_and_exp;
-    unique_ptr<BaseAST> l_or_exp;
+    unique_ptr<ComputeBaseAST> l_and_exp;
+    unique_ptr<ComputeBaseAST> l_or_exp;
     string op;
 
     void Dump() override {
@@ -646,7 +727,6 @@ public:
         if(!strcmp( parse_type.c_str(), "lAndExp")) {
             l_and_exp->Dump();
             variable_name = l_and_exp->variable_name;
-            val = l_and_exp->val;
         }
         else if (!strcmp( parse_type.c_str(), "bin")) {
             l_or_exp->Dump();
@@ -660,33 +740,42 @@ public:
                 assert(false);
             }
             variable_name = "%" + to_string(tempID);
-            val = l_or_exp->val || l_and_exp->val;
             tempID++;
         }
-
+        else {
+            assert(false);
+        }
+    
         #ifdef _DEBUG
         cout << "}\n";
         #endif
     }
+    void Compute() override {
+        if(!strcmp(parse_type.c_str(), "lAndExp")) {
+            l_and_exp->Compute();
+            val = l_and_exp->val;
+        }
+        else if (!strcmp(parse_type.c_str(), "bin")) {
+            l_or_exp->Compute();
+            l_and_exp->Compute();
+            val = l_or_exp->val || l_and_exp->val;
+        }
+        else {
+            assert(false);
+        }
+    }
 };
 
-class ConstExpAST : public BaseAST {
+class ConstExpAST : public ComputeBaseAST {
 public:
-    unique_ptr<BaseAST> exp;
+    unique_ptr<ComputeBaseAST> exp;
 
     void Dump() override {
-        #ifdef _DEBUG
-        cout << "PrimaryExpAST {\n";
-        #endif
-        
         exp->Dump();
-        variable_name = exp->variable_name;
+    }
+    void Compute() override {
+        exp->Compute();
         val = exp->val;
-
-
-        #ifdef _DEBUG
-        cout << "}\n";
-        #endif
     }
 };
 
