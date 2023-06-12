@@ -13,7 +13,8 @@
 
 using namespace std;
 
-// #define DEBUG_MAIN
+// #define DEBUG_KOOPA
+// #define DEBUG_RISCV
 
 // 声明 lexer 的输入, 以及 parser 函数
 // 为什么不引用 sysy.tab.hpp 呢? 因为首先里面没有 yyin 的定义
@@ -43,7 +44,7 @@ int main(int argc, const char *argv[]) {
   assert(!ret);
 
   // 输出解析得到的 AST, 其实就是个字符串
-  #ifndef DEBUG_MAIN
+  #ifndef DEBUG_KOOPA
   stringstream ss;
   streambuf * coutBuffer = cout.rdbuf();
   cout.rdbuf(ss.rdbuf());
@@ -51,7 +52,7 @@ int main(int argc, const char *argv[]) {
 
   ast->Dump();
 
-  #ifndef DEBUG_MAIN
+  #ifndef DEBUG_KOOPA
   string text = ss.str();
   cout.rdbuf(coutBuffer);
 
@@ -62,13 +63,16 @@ int main(int argc, const char *argv[]) {
     assert(!fclose(outFile));
   }
 
+
   if(strcmp(mode, "-riscv") == 0) {
     FILE * outFile = fopen(output, "w");
     assert(outFile);
 
+    #ifndef DEBUG_RISCV
     stringstream riscv_ss;
     streambuf * coutBuffer2 = cout.rdbuf();
     cout.rdbuf(riscv_ss.rdbuf());
+    #endif
 
     // 解析字符串 text, 得到 Koopa IR 程序
     koopa_program_t program;
@@ -89,11 +93,13 @@ int main(int argc, const char *argv[]) {
     // 所以不要在 raw program 处理完毕之前释放 builder
     koopa_delete_raw_program_builder(builder);
 
+    #ifndef DEBUG_RISCV
     string riscv_result = riscv_ss.str();
     cout.rdbuf(coutBuffer2);
 
     fwrite(riscv_result.c_str(), sizeof(char), riscv_result.length(), outFile);
     assert(!fclose(outFile));
+    #endif
   }
 
   #endif
