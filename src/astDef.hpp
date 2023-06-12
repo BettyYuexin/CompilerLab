@@ -41,6 +41,14 @@ public:
         }
         return false;
     }
+
+    bool is_const(string label) {
+        return const_table.count(label);
+    }
+
+    bool is_var(string label) {
+        return var_table.count(label);
+    }
     void insert(string label, int val, bool is_const) {
         if(exists(label)) {
             cout << "redefination of " << label << endl;
@@ -257,15 +265,16 @@ public:
         if(!strcmp(parse_type.c_str(), "ident")) {
             variable_name = ident;
             symbolTable.insert(variable_name, 0, false);
-            cout << "@" << variable_name << " = alloc i32\n";
+            cout << "\t@" << variable_name << " = alloc i32\n";
         }
         else if(!strcmp(parse_type.c_str(), "eq")) {
+            init_val->Dump();
             init_val->Compute();
             variable_name = ident;
             val = init_val->val;
             symbolTable.insert(variable_name, val, false);
             cout << "\t@" << variable_name << " = alloc i32\n";
-            cout << "\tstore " << val << ", @" << variable_name << endl;
+            cout << "\tstore " << init_val->variable_name << ", @" << variable_name << endl;
         }
         
         #ifdef _DEBUG
@@ -412,8 +421,11 @@ public:
 
         if(!strcmp(parse_type.c_str(), "ret")) {
             exp->Dump();
-            if(symbolTable.exists(exp->variable_name)) {
+            if(symbolTable.is_const(exp->variable_name)) {
                 cout << "\tret " << symbolTable.getVal(exp->variable_name) << "\n";    
+            }
+            else if(symbolTable.is_var(exp->variable_name)) {
+                cout << "\tret " << exp->variable_name << "\n";    
             }
             else {
                 cout << "\tret " << exp->variable_name << "\n";
@@ -583,9 +595,14 @@ public:
         }
         else if (!strcmp(parse_type.c_str(), "lval")) {
             assert(symbolTable.exists(lval));
-            cout << "\t%" << tempID << " = load @" << lval << endl;
-            variable_name = "%" + to_string(tempID);
-            tempID++;
+            if(symbolTable.is_var(lval)) {
+                cout << "\t%" << tempID << " = load @" << lval << endl;
+                variable_name = "%" + to_string(tempID);
+                tempID++;
+            }
+            else if (symbolTable.is_const(lval)) {
+                variable_name = to_string(symbolTable.getVal(lval));
+            }
         }
         else {
             assert(false);
