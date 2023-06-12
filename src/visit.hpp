@@ -14,12 +14,9 @@ using namespace std;
 #define REG_CNT 15
 
 string tempRegName[REG_CNT] = {"t0", "t1", "t2", "t3", "t4", "t5", "t6", "a0", "a1", "a2", "a3", "a4", "a5", "a6", "a7"};
-static map<long, string> insts_table;
+static map<long, int> insts_table;
 static int regCnt = 0;
 static bool regVisited[REG_CNT] = {};
-// static map<string, int> regName2ID {
-  
-// };
 
 // 函数声明
 void Visit(const koopa_raw_program_t&);
@@ -51,14 +48,22 @@ int getNextRegID() {
   return regCnt;
 }
 
-void releaseReg() {
-  
+void releaseReg(string reg_name) {
+  for(auto iter = insts_table.begin(); iter != insts_table.end(); iter++) {
+    if(!strcmp(tempRegName[iter->second].c_str(), reg_name.c_str())) {
+      regVisited[iter->second] = true;
+      insts_table.erase(iter);
+      return;
+    }
+  }
+
+  assert(false);
 }
 
 string allocInstsTable(long ptr) {
   string regName = tempRegName[regCnt];
+  insts_table.insert(make_pair(ptr, regCnt));
   regCnt++;
-  insts_table.insert(make_pair(ptr, regName));
   return regName;
 }
 
@@ -78,7 +83,7 @@ string getVarName(const koopa_raw_value_t &value) {
     }
     case KOOPA_RVT_BINARY: {
       if(visitedInst((long)(&kind.data.binary))) {
-        regName = insts_table[(long)(&kind.data.binary)];
+        regName = tempRegName[insts_table[(long)(&kind.data.binary)]];
       }
       else {
         assert(false);
