@@ -45,7 +45,10 @@ using namespace std;
 // 非终结符的类型定义
 %type <ast_val> Decl ConstDecl ConstDeclRec ConstDef FuncDef 
 %type <ast_val> FuncType Block BlockItemRec BlockItem Stmt
-%type <compute_ast_val> ConstInitVal UnaryExp AddExp MulExp RelExp EqExp LAndExp LOrExp ConstExp Exp PrimaryExp
+%type <ast_val> VarDecl VarDeclRec VarDef
+%type <compute_ast_val> ConstInitVal UnaryExp AddExp MulExp RelExp 
+%type <compute_ast_val> EqExp LAndExp LOrExp ConstExp Exp PrimaryExp
+%type <compute_ast_val> InitVal
 %type <int_val> Number
 %type <str_val> UnaryOp BinaryOp1 BinaryOp2 RelOp EqOp BType LVal
 
@@ -64,11 +67,15 @@ Decl
   : ConstDecl {
     auto ast = new DeclAST();
     ast->const_decl = unique_ptr<BaseAST>($1);
+    ast->parse_type = "const";
     $$ = ast;
   }
-  // | VarDecl {
-
-  // }
+  | VarDecl {
+    auto ast = new DeclAST();
+    ast->var_decl = unique_ptr<BaseAST>($1);
+    ast->parse_type = "var";
+    $$ = ast;
+  }
   ;
 
 ConstDecl
@@ -118,16 +125,55 @@ ConstInitVal
     $$ = ast;
   };
 
-// VarDecl
-//   : BType VarDef {"," VarDef} ';' {};
+VarDecl
+  : BType VarDeclRec ';' {
+    auto ast = new VarDeclAST();
+    ast->type = *unique_ptr<string>($1);
+    ast->var_decl_rec = unique_ptr<BaseAST>($2);
+    $$ = ast;
+  }
+  ;
+
+VarDeclRec
+  : VarDef {
+    auto ast = new VarDeclRecAST();
+    ast->var_def = unique_ptr<BaseAST>($1);
+    ast->parse_type = "varDef";
+    $$ = ast;
+  }
+  | VarDeclRec ',' VarDef {
+    auto ast = new VarDeclRecAST();
+    ast->var_decl_rec = unique_ptr<BaseAST>($1);
+    ast->var_def = unique_ptr<BaseAST>($3);
+    ast->parse_type = "rec";
+    $$ = ast;
+  }
+  ;
 
 // 定义变量，第一种方式中实际初始值未定义
-// VarDef 
-//   : IDENT {}
-//   | IDENT '=' InitVal {};
+VarDef 
+  : IDENT {
+    auto ast = new VarDefAST();
+    ast->ident = *unique_ptr<string>($1);
+    ast->parse_type = "ident";
+    $$ = ast;
+  }
+  | IDENT '=' InitVal {
+    auto ast = new VarDefAST();
+    ast->ident = *unique_ptr<string>($1);
+    ast->init_val = unique_ptr<ComputeBaseAST>($3);
+    ast->parse_type = "eq";
+    $$ = ast;
+  }
+  ;
 
-// InitVal
-//   : Exp {};
+InitVal
+  : Exp {
+    auto ast = new InitValAST();
+    ast->exp = unique_ptr<ComputeBaseAST>($1);
+    $$ = ast;
+  }
+  ;
 
 FuncDef
   : FuncType IDENT '(' ')' Block {
@@ -194,12 +240,19 @@ BlockItem
   };
 
 Stmt
-  : RETURN Exp ';' {
+  : LVal '=' Exp ';' {
     auto ast = new StmtAST();
-    ast->exp = unique_ptr<ComputeBaseAST>($2);
+    ast->lval = *unique_ptr<string>($1);
+    ast->exp = unique_ptr<ComputeBaseAST>($3);
+    ast->parse_type = "lval";
     $$ = ast;
   }
-  // | LVal '=' Exp ';' {}
+  | RETURN Exp ';' {
+    auto ast = new StmtAST();
+    ast->exp = unique_ptr<ComputeBaseAST>($2);
+    ast->parse_type = "ret";
+    $$ = ast;
+  }
   ;
 
 // Exp内出现的LVal必须是之前定义过的

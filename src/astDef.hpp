@@ -98,12 +98,21 @@ class DeclAST : public BaseAST {
 public:
     // 用智能指针管理对象
     unique_ptr<BaseAST> const_decl;
+    unique_ptr<BaseAST> var_decl;
     
     void Dump() override {
         #ifdef _DEBUG
         cout << "DeclAST {\n";
         #endif
-        const_decl->Dump();
+        if(!strcmp("const", parse_type.c_str())) {
+            const_decl->Dump();
+        }
+        else if(!strcmp("var", parse_type.c_str())) {
+            var_decl->Dump();
+        }
+        else {
+            assert(false);
+        }
         #ifdef _DEBUG
         cout << "}\n";
         #endif
@@ -187,6 +196,96 @@ public:
     void Compute() override {
         const_exp->Compute();
         val = const_exp->val;
+    }
+};
+
+class VarDeclAST : public BaseAST {
+public:
+    unique_ptr<BaseAST> var_decl_rec;
+    string type;
+    
+    void Dump() override {
+        #ifdef _DEBUG
+        cout << "VarDeclAST {\n";
+        #endif
+
+        var_decl_rec->Dump();
+
+        #ifdef _DEBUG
+        cout << "}\n";
+        #endif
+    }
+};
+
+class VarDeclRecAST : public BaseAST {
+public:
+    unique_ptr<BaseAST> var_decl_rec;
+    unique_ptr<BaseAST> var_def;
+    
+    void Dump() override {
+        #ifdef _DEBUG
+        cout << "VarDeclRecAST {\n";
+        #endif
+
+        if(!strcmp(parse_type.c_str(), "varDef")) {
+            var_def->Dump();
+        }
+        else if (!strcmp(parse_type.c_str(), "rec")) {
+            var_decl_rec->Dump();
+            var_def->Dump();
+        }   
+        else {
+            assert(false);
+        }
+
+        #ifdef _DEBUG
+        cout << "}\n";
+        #endif
+    }
+};
+
+class VarDefAST : public BaseAST {
+public:
+    string ident;
+    unique_ptr<ComputeBaseAST> init_val;
+    
+    void Dump() override {
+        #ifdef _DEBUG
+        cout << "VarDefAST {\n";
+        #endif
+
+        if(!strcmp(parse_type.c_str(), "ident")) {
+            variable_name = ident;
+            symbolTable.insert(variable_name, 0, false);
+            cout << "@" << variable_name << " = alloc i32\n";
+        }
+        else if(!strcmp(parse_type.c_str(), "eq")) {
+            init_val->Compute();
+            variable_name = ident;
+            val = init_val->val;
+            symbolTable.insert(variable_name, val, false);
+            cout << "\t@" << variable_name << " = alloc i32\n";
+            cout << "\tstore " << val << ", @" << variable_name << endl;
+        }
+        
+        #ifdef _DEBUG
+        cout << "insert " << variable_name << " " << val << endl; 
+        cout << "}\n";
+        #endif
+    }
+};
+
+class InitValAST : public ComputeBaseAST {
+public:
+    unique_ptr<ComputeBaseAST> exp;
+    
+    void Dump() override {
+        exp->Dump();
+        variable_name = exp->variable_name;
+    }
+    void Compute() override {
+        exp->Compute();
+        val = exp->val;
     }
 };
 
@@ -303,20 +402,31 @@ public:
 
 class StmtAST : public BaseAST {
 public:
-    unique_ptr<BaseAST> exp;
+    unique_ptr<ComputeBaseAST> exp;
+    string lval;
 
     void Dump() override {
         #ifdef _DEBUG
         cout << "StmtAST {\n";
         #endif
 
-        exp->Dump();
-        if(symbolTable.exists(exp->variable_name)) {
-            cout << "\tret " << symbolTable.getVal(exp->variable_name) << "\n";    
+        if(!strcmp(parse_type.c_str(), "ret")) {
+            exp->Dump();
+            if(symbolTable.exists(exp->variable_name)) {
+                cout << "\tret " << symbolTable.getVal(exp->variable_name) << "\n";    
+            }
+            else {
+                cout << "\tret " << exp->variable_name << "\n";
+            }
+        }
+        else if(!strcmp(parse_type.c_str(), "lval")) {
+            exp->Dump();
+            cout << "\tstore " << exp->variable_name << ", @" << lval << endl;
         }
         else {
-            cout << "\tret " << exp->variable_name << "\n";
+            assert(false);
         }
+        
 
         #ifdef _DEBUG
         cout << "}\n";
@@ -472,7 +582,13 @@ public:
             variable_name = to_string(number);
         }
         else if (!strcmp(parse_type.c_str(), "lval")) {
-            variable_name = lval;
+            assert(symbolTable.exists(lval));
+            cout << "\t%" << tempID << " = load @" << lval << endl;
+            variable_name = "%" + to_string(tempID);
+            tempID++;
+        }
+        else {
+            assert(false);
         }
 
         #ifdef _DEBUG
@@ -488,7 +604,7 @@ public:
             val = number;
         }
         else if (!strcmp(parse_type.c_str(), "lval")) {
-            val = symbolTable.getVal(variable_name);
+            val = symbolTable.getVal(lval);
         }
     }
 };
