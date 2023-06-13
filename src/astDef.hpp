@@ -17,6 +17,8 @@ using namespace std;
 // };
 static int tempID = 0;
 static int layer_cnt = 0;
+static int cur_layer = 0;
+static map<int, int> father;
 
 static string get_label(string var_name, int layer) {
     return var_name + "_" + to_string(layer);
@@ -31,12 +33,12 @@ public:
     VarInfo (string label, int v) {
         var_name = label;
         val = v;
-        layer = layer_cnt;
+        layer = cur_layer;
     }
     VarInfo () {
         var_name = "";
         val = 0;
-        layer = layer_cnt;
+        layer = cur_layer;
     }
 };
 
@@ -45,13 +47,14 @@ class SymbolTable {
     map<string, VarInfo> var_table;
 public:
     string get_var_label(string var_name) {
-        int t = layer_cnt;
+        int t = cur_layer;
         while(t >= 0) {
             string label = var_name + "_" + to_string(t);
             if(exists(label)) {
                 return label;
             }
-            t--;
+            if(!father.count(t)) break;
+            t = father[t];
         }
         return "%NotStored%";
     }
@@ -204,7 +207,7 @@ public:
         #endif
 
         const_init_val->Compute();
-        variable_name = get_label(ident, layer_cnt);
+        variable_name = get_label(ident, cur_layer);
         val = const_init_val->val;
         symbolTable.insert(variable_name, val, true);
         
@@ -284,14 +287,14 @@ public:
         #endif
 
         if(!strcmp(parse_type.c_str(), "ident")) {
-            variable_name = get_label(ident, layer_cnt);
+            variable_name = get_label(ident, cur_layer);
             symbolTable.insert(variable_name, 0, false);
             cout << "\t@" << variable_name << " = alloc i32\n";
         }
         else if(!strcmp(parse_type.c_str(), "eq")) {
             init_val->Dump();
             init_val->Compute();
-            variable_name = get_label(ident, layer_cnt);
+            variable_name = get_label(ident, cur_layer);
             val = init_val->val;
             symbolTable.insert(variable_name, val, false);
             cout << "\t@" << variable_name << " = alloc i32\n";
@@ -371,8 +374,10 @@ public:
         #endif
 
         layer_cnt++;
+        father[layer_cnt] = cur_layer;
+        cur_layer = layer_cnt;
         block_item_rec->Dump();
-        layer_cnt--;
+        cur_layer = father[cur_layer];
 
         #ifdef _DEBUG
         cout << "}\n";
