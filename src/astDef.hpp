@@ -15,26 +15,50 @@ using namespace std;
 // map <string, string> type2IRtype = {
 //     {"int", "i32"}
 // };
+static int tempID = 0;
+static int layer_cnt = 0;
+static int cur_layer = 0;
+static map<int, int> father;
+
+static string get_label(string var_name, int layer) {
+    return var_name + "_" + to_string(layer);
+}
+
 class VarInfo {
 public:
     string var_name;
     int val;
+    int layer;
     
     VarInfo (string label, int v) {
         var_name = label;
         val = v;
+        layer = cur_layer;
     }
     VarInfo () {
         var_name = "";
         val = 0;
+        layer = cur_layer;
     }
 };
-static int tempID = 0;
 
 class SymbolTable {
     map<string, VarInfo> const_table;
     map<string, VarInfo> var_table;
 public:
+    string get_var_label(string var_name) {
+        int t = cur_layer;
+        while(t >= 0) {
+            string label = var_name + "_" + to_string(t);
+            if(exists(label)) {
+                return label;
+            }
+            if(!father.count(t)) break;
+            t = father[t];
+        }
+        return "%NotStored%";
+    }
+
     bool exists(string label) {
         if(const_table.count(label) || var_table.count(label)) {
             return true;
@@ -183,12 +207,12 @@ public:
         #endif
 
         const_init_val->Compute();
-        variable_name = ident;
+        variable_name = get_label(ident, cur_layer);
         val = const_init_val->val;
         symbolTable.insert(variable_name, val, true);
         
         #ifdef _DEBUG
-        cout << "insert " << variable_name << " " << val << endl; 
+        cout << "insert " << ident << " " << val << endl; 
         cout << "}\n";
         #endif
     }
@@ -263,14 +287,14 @@ public:
         #endif
 
         if(!strcmp(parse_type.c_str(), "ident")) {
-            variable_name = ident;
+            variable_name = get_label(ident, cur_layer);
             symbolTable.insert(variable_name, 0, false);
             cout << "\t@" << variable_name << " = alloc i32\n";
         }
         else if(!strcmp(parse_type.c_str(), "eq")) {
             init_val->Dump();
             init_val->Compute();
-            variable_name = ident;
+            variable_name = get_label(ident, cur_layer);
             val = init_val->val;
             symbolTable.insert(variable_name, val, false);
             cout << "\t@" << variable_name << " = alloc i32\n";
@@ -278,7 +302,7 @@ public:
         }
         
         #ifdef _DEBUG
-        cout << "insert " << variable_name << " " << val << endl; 
+        cout << "insert " << ident << " " << val << endl; 
         cout << "}\n";
         #endif
     }
@@ -313,6 +337,7 @@ public:
         cout << "fun @" << ident << "(): ";
         func_type->Dump();
         cout << "{\n";
+        cout << "%" << "entry:\n";
         block->Dump();
         cout << "}\n";
 
@@ -348,8 +373,11 @@ public:
         cout << "BlockAST {\n";
         #endif
 
-        cout << "%" << "entry:\n";
+        layer_cnt++;
+        father[layer_cnt] = cur_layer;
+        cur_layer = layer_cnt;
         block_item_rec->Dump();
+        cur_layer = father[cur_layer];
 
         #ifdef _DEBUG
         cout << "}\n";
@@ -412,6 +440,7 @@ public:
 class StmtAST : public BaseAST {
 public:
     unique_ptr<ComputeBaseAST> exp;
+    unique_ptr<BaseAST> block;
     string lval;
 
     void Dump() override {
@@ -421,19 +450,29 @@ public:
 
         if(!strcmp(parse_type.c_str(), "ret")) {
             exp->Dump();
-            if(symbolTable.is_const(exp->variable_name)) {
-                cout << "\tret " << symbolTable.getVal(exp->variable_name) << "\n";    
-            }
-            else if(symbolTable.is_var(exp->variable_name)) {
-                cout << "\tret " << exp->variable_name << "\n";    
+            string label = symbolTable.get_var_label(exp->variable_name);
+            if(symbolTable.is_const(label)) {
+                cout << "\tret " << symbolTable.getVal(label) << "\n";    
             }
             else {
+                // ret %reg
                 cout << "\tret " << exp->variable_name << "\n";
             }
         }
         else if(!strcmp(parse_type.c_str(), "lval")) {
             exp->Dump();
-            cout << "\tstore " << exp->variable_name << ", @" << lval << endl;
+            string label = symbolTable.get_var_label(lval);
+            cout << "\tstore " << exp->variable_name << ", @" << label << endl;
+        }
+        else if(!strcmp(parse_type.c_str(), "empty")) {}
+        else if(!strcmp(parse_type.c_str(), "exp")) {
+            exp->Dump();
+        }
+        else if(!strcmp(parse_type.c_str(), "block")) {
+            block->Dump();
+        }
+        else if(!strcmp(parse_type.c_str(), "ret empty")) {
+            cout << "\tret\n";
         }
         else {
             assert(false);
@@ -594,14 +633,14 @@ public:
             variable_name = to_string(number);
         }
         else if (!strcmp(parse_type.c_str(), "lval")) {
-            assert(symbolTable.exists(lval));
-            if(symbolTable.is_var(lval)) {
-                cout << "\t%" << tempID << " = load @" << lval << endl;
+            string label = symbolTable.get_var_label(lval);
+            if(symbolTable.is_var(label)) {
+                cout << "\t%" << tempID << " = load @" << label << endl;
                 variable_name = "%" + to_string(tempID);
                 tempID++;
             }
-            else if (symbolTable.is_const(lval)) {
-                variable_name = to_string(symbolTable.getVal(lval));
+            else if (symbolTable.is_const(label)) {
+                variable_name = to_string(symbolTable.getVal(label));
             }
         }
         else {
@@ -621,7 +660,8 @@ public:
             val = number;
         }
         else if (!strcmp(parse_type.c_str(), "lval")) {
-            val = symbolTable.getVal(lval);
+            string label = symbolTable.get_var_label(lval);
+            val = symbolTable.getVal(label);
         }
     }
 };

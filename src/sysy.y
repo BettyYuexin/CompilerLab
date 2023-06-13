@@ -247,6 +247,28 @@ Stmt
     ast->parse_type = "lval";
     $$ = ast;
   }
+  | ';' {
+    auto ast = new StmtAST();
+    ast->parse_type = "empty";
+    $$ = ast;
+  }
+  | Exp ';' {
+    auto ast = new StmtAST();
+    ast->exp = unique_ptr<ComputeBaseAST>($1);
+    ast->parse_type = "exp";
+    $$ = ast;
+  }
+  | Block {
+    auto ast = new StmtAST();
+    ast->block = unique_ptr<BaseAST>($1);
+    ast->parse_type = "block";
+    $$ = ast;
+  }
+  | RETURN ';' {
+    auto ast = new StmtAST();
+    ast->parse_type = "ret empty";
+    $$ = ast;
+  }
   | RETURN Exp ';' {
     auto ast = new StmtAST();
     ast->exp = unique_ptr<ComputeBaseAST>($2);
@@ -498,5 +520,12 @@ EqOp
 // 定义错误处理函数, 其中第二个参数是错误信息
 // parser 如果发生错误 (例如输入的程序出现了语法错误), 就会调用这个函数
 void yyerror(unique_ptr<BaseAST> &ast, const char *s) {
-  cerr << "error: " << s << endl;
+  extern int yylineno;
+  extern char * yytext;
+  int len = strlen(yytext);
+  char buf[512] = {};
+  for(int i = 0; i < len; i++) {
+    sprintf(buf, "%s%d ", buf, yytext[i]);
+  }
+  fprintf(stderr, "ERROR: %s at symbol '%s' on line %d\n", s, buf, yylineno);
 }
