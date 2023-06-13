@@ -247,11 +247,27 @@ Stmt
     ast->parse_type = "lval";
     $$ = ast;
   }
-  | '[' Exp ']' ';' {
-
+  | ';' {
+    auto ast = new StmtAST();
+    ast->parse_type = "empty";
+    $$ = ast;
+  }
+  | Exp ';' {
+    auto ast = new StmtAST();
+    ast->exp = unique_ptr<ComputeBaseAST>($1);
+    ast->parse_type = "exp";
+    $$ = ast;
   }
   | Block {
-
+    auto ast = new StmtAST();
+    ast->block = unique_ptr<BaseAST>($1);
+    ast->parse_type = "block";
+    $$ = ast;
+  }
+  | RETURN ';' {
+    auto ast = new StmtAST();
+    ast->parse_type = "ret empty";
+    $$ = ast;
   }
   | RETURN Exp ';' {
     auto ast = new StmtAST();
